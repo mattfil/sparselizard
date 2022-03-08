@@ -5,11 +5,10 @@ function(ConfigureBLAS TARGET)
 FIND_PATH(BLAS_INCLUDE_PATH
     NAMES cblas.h
     PATHS
-    "${PETSC_PATH}/arch-linux-c-opt/include"
-    "${PETSC_PATH}/arch-linux2-c-opt/include"
-    "${PETSC_PATH}/arch-darwin-c-opt/include"
+    "${BLAS_PATH}/include"
     NO_DEFAULT_PATH
     )
+#get_filename_component(BLAS_INCLUDE_PATH "${BLAS_INCLUDE_PATH}" DIRECTORY )
 
 if(BLAS_INCLUDE_PATH)
     message(STATUS "Blas header cblas.h found at " ${BLAS_INCLUDE_PATH})
@@ -20,11 +19,9 @@ endif()
 
 # Find blas library:
 FIND_LIBRARY(BLAS_LIBRARIES
-    NAMES openblas
+    NAMES libopenblas.lib
     PATHS
-    "${PETSC_PATH}/arch-linux-c-opt/lib"
-    "${PETSC_PATH}/arch-linux2-c-opt/lib"
-    "${PETSC_PATH}/arch-darwin-c-opt/lib"
+    "${BLAS_PATH}/lib"
     NO_DEFAULT_PATH
     )
 

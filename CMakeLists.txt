@@ -8,6 +8,8 @@ set(DEFAULT_BUILD_TYPE "Release")
 set(CMAKE_BUILD_TYPE "${DEFAULT_BUILD_TYPE}" CACHE STRING "Choose the type of build" FORCE)
 
 set(PETSC_PATH "~/SLlibs/petsc" CACHE STRING "Provide the path to the petsc folder")
+set(SLEPC_PATH "~/SLlibs/petsc" CACHE STRING "Provide the path to the petsc folder")
+set(BLAS_PATH "~/SLlibs/blas" CACHE STRING "Provide the path to the petsc folder")
 set(GMSH_PATH "~/SLlibs/gmsh" CACHE STRING "Provide the path to the gmsh folder")
 set(MPI_PATH "" CACHE STRING "Provide the path to the mpi folder")
 

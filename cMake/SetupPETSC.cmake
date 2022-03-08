@@ -21,8 +21,10 @@ FIND_PATH(PETSCCONF_INCLUDE_PATH
     "${PETSC_PATH}/arch-linux-c-opt/include"
     "${PETSC_PATH}/arch-linux2-c-opt/include"
     "${PETSC_PATH}/arch-darwin-c-opt/include"
+	"${PETSC_PATH}/arch-mswin-c-opt/include"
     NO_DEFAULT_PATH
     )
+#get_filename_component(PETSCCONF_INCLUDE_PATH "${PETSCCONF_INCLUDE_PATH}" DIRECTORY )
 
 if(PETSCCONF_INCLUDE_PATH)
     message(STATUS "Petsc header petscconf.h found at " ${PETSCCONF_INCLUDE_PATH})
@@ -30,19 +32,19 @@ else()
     message(STATUS "PETSC HEADER PETSCCONF.H NOT FOUND")
 endif()
 
-
 # Find petsc library:
-FIND_LIBRARY(PETSC_LIBRARIES
-    NAMES petsc
+FIND_FILE(PETSC_LIBRARIES
+    NAMES libpetsc.lib
     PATHS
     "${PETSC_PATH}/arch-linux-c-opt/lib"
     "${PETSC_PATH}/arch-linux2-c-opt/lib"
     "${PETSC_PATH}/arch-darwin-c-opt/lib"
+	"${PETSC_PATH}/arch-mswin-c-opt/lib"
     NO_DEFAULT_PATH
     )
 
 if(PETSC_LIBRARIES)
-    message(STATUS "Petsc library found at " ${PETSC_LIBRARIES})
+    message(STATUS "PETSC library found at " ${PETSC_LIBRARIES})
 else()
     message(STATUS "PETSC LIBRARY NOT FOUND")
 endif()

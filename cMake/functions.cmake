@@ -1,11 +1,21 @@
 # Add library for dirs
-function(custom_add_library_from_dir TARGET DIRLIST)
+function(custom_add_library_from_dir TARGET DIRLIST NAME)
     foreach(d IN LISTS DIRLIST)
         file(GLOB SRC "${d}/*.cpp" "${d}/*.h" "${d}/*.hpp")
         list(APPEND TARGET_SRC ${SRC})
     endforeach()
     add_library(${TARGET} SHARED ${TARGET_SRC})
+	set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME ${NAME})
 endfunction(custom_add_library_from_dir)
+
+function(custom_add_static_library_from_dir TARGET DIRLIST NAME)
+    foreach(d IN LISTS DIRLIST)
+        file(GLOB SRC "${d}/*.cpp" "${d}/*.h" "${d}/*.hpp")
+        list(APPEND TARGET_SRC ${SRC})
+    endforeach()
+    add_library(${TARGET} STATIC ${TARGET_SRC})
+	set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME ${NAME})
+endfunction(custom_add_static_library_from_dir)
 
 # Add executable for dirs
 function(custom_add_executable_from_dir TARGET DIRLIST)

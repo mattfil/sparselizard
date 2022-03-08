@@ -18,32 +18,46 @@ set(SRC_DIR_LIST
   ${CMAKE_CURRENT_SOURCE_DIR}/expression/operation
   ${CMAKE_CURRENT_SOURCE_DIR}/gausspoint)
 
-custom_add_library_from_dir(sparselizard "${SRC_DIR_LIST}")
+custom_add_library_from_dir(sparselizardDLL "${SRC_DIR_LIST}" "sparselizard")
+custom_add_static_library_from_dir(sparselizardLIB "${SRC_DIR_LIST}" "sparselizard")
 
-custom_copy_file(sparselizard "${SRC_DIR_LIST}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/include" "*.h")
+custom_copy_file(sparselizardDLL "${SRC_DIR_LIST}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/include" "*.h")
+custom_copy_file(sparselizardLIB "${SRC_DIR_LIST}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/include" "*.h")
 
-target_include_directories(sparselizard PUBLIC ${SRC_DIR_LIST})
+target_include_directories(sparselizardDLL PUBLIC ${SRC_DIR_LIST})
+target_include_directories(sparselizardLIB PUBLIC ${SRC_DIR_LIST})
 
-target_compile_features(sparselizard PRIVATE cxx_std_11)
-target_compile_options(sparselizard PUBLIC -fPIC -no-pie -O3)
+target_compile_features(sparselizardDLL PRIVATE cxx_std_11)
+target_compile_options(sparselizardDLL PUBLIC -fPIC -no-pie -O3)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+target_compile_features(sparselizardLIB PRIVATE cxx_std_11)
+target_compile_options(sparselizardLIB PUBLIC -fPIC -no-pie -O3)
 
-ConfigureBLAS(sparselizard)
-ConfigureGMSH(sparselizard)
-ConfigureMETIS(sparselizard)
-ConfigureMPI(sparselizard)
-ConfigureMUMPS(sparselizard)
-ConfigurePETSC(sparselizard)
-ConfigureSLEPC(sparselizard)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp /Za /std:c++14 /MP")
+
+ConfigureBLAS(sparselizardDLL)
+ConfigureGMSH(sparselizardDLL)
+ConfigureMETIS(sparselizardDLL)
+ConfigureMPI(sparselizardDLL)
+ConfigureMUMPS(sparselizardDLL)
+ConfigurePETSC(sparselizardDLL)
+ConfigureSLEPC(sparselizardDLL)
+
+ConfigureBLAS(sparselizardLIB)
+ConfigureGMSH(sparselizardLIB)
+ConfigureMETIS(sparselizardLIB)
+ConfigureMPI(sparselizardLIB)
+ConfigureMUMPS(sparselizardLIB)
+ConfigurePETSC(sparselizardLIB)
+ConfigureSLEPC(sparselizardLIB)
 
 # Optional for std::thread
 # find_package(Threads)
 # target_link_libraries(sparselizard PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
-if(NOT (${BLAS_FOUND} AND ${METIS_FOUND} AND ${MUMPS_FOUND} AND ${PETSC_FOUND} AND ${SLEPC_FOUND}))
-    message(FATAL_ERROR "\nAt least one required package (blas, metis, mumps, petsc, slepc) not found.")
-endif()
+#if(NOT (${BLAS_FOUND} AND ${METIS_FOUND} AND ${MUMPS_FOUND} AND ${PETSC_FOUND} AND ${SLEPC_FOUND}))
+#    message(FATAL_ERROR "\nAt least one required package (blas, metis, mumps, petsc, slepc) not found.")
+#endif()
 
 # set configure file
 if(${BLAS_FOUND})
@@ -68,9 +82,15 @@ if(${SLEPC_FOUND})
     add_definitions(-DHAVE_SLEPC)
 endif()
 
-target_include_directories(sparselizard PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(sparselizardDLL PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(sparselizardLIB PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
-install(TARGETS sparselizard)
+install(TARGETS sparselizardDLL)
 install(DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/include/"
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/sparselizard"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/sparselizardDLL"
+        FILES_MATCHING PATTERN "*.h")
+		
+install(TARGETS sparselizardLIB)
+install(DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/include/"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/sparselizardLIB"
         FILES_MATCHING PATTERN "*.h")
