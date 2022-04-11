@@ -103,6 +103,8 @@ class rawmesh : public std::enable_shared_from_this<rawmesh>
         void load(bool mergeduplicates, std::vector<std::string> meshfiles, int verbosity);
         // Load from shape vector:
         void load(std::vector<shape> inputshapes, int globalgeometryskin, int numoverlaplayers, int verbosity);
+        //Load from custom structures...
+        void load(std::vector<std::tuple<double, double, double,bool>>& nodes_d, std::vector<std::vector<unsigned int>>& whole_mesh, int globalgeometryskin, int numoverlaplayers, bool rotation_enabled, int verbosity);
 
         // Write to file name:
         void write(std::string name, int verbosity);     

@@ -48,6 +48,7 @@ class mesh
         mesh(bool mergeduplicates, std::vector<std::string> meshfiles, int verbosity = 1);
         mesh(std::vector<shape> inputshapes, int verbosity = 1);
         mesh(std::vector<shape> inputshapes, int globalgeometryskin, int numoverlaplayers, int verbosity = 1);
+        mesh(std::vector<std::tuple<double, double, double,bool>>& nodes, std::vector<std::vector<unsigned int>>& connections, bool rotation_enabled, int verbosity);
 
         // Load from file name:
         void load(std::string name, int verbosity = 1);   
@@ -57,7 +58,7 @@ class mesh
         // Load from shape vector:
         void load(std::vector<shape> inputshapes, int verbosity = 1);
         void load(std::vector<shape> inputshapes, int globalgeometryskin, int numoverlaplayers, int verbosity = 1);
-
+        void load(std::vector<std::tuple<double, double, double,bool>>& nodes, std::vector<std::vector<unsigned int>>& connections, bool rotation_enabled, int verbosity = 1);
         // Write to file name:
         void write(std::string name, int verbosity = 1);     
         

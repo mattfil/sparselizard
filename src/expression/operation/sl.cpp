@@ -1512,6 +1512,8 @@ vec sl::solve(mat A, vec b, std::string soltype, bool diagscaling)
     return A.xbmerge(sol, b);
 }
 
+
+
 std::vector<vec> sl::solve(mat A, std::vector<vec> b, std::string soltype)
 {
     if (soltype != "lu" && soltype != "cholesky")

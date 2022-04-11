@@ -34,6 +34,15 @@ mesh::mesh(std::string filename, int verbosity)
     isloaded = true;
 }
 
+mesh::mesh(std::vector<std::tuple<double, double, double,bool>>& nodes, std::vector<std::vector<unsigned int>>& connections, bool rotation_enabled, int verbosity)
+{
+    rawmeshptr = std::shared_ptr<rawmesh>(new rawmesh());
+    universe::myrawmesh = rawmeshptr;
+    rawmeshptr->load(nodes, connections,-1,-1, rotation_enabled, verbosity);
+    universe::myrawmesh = rawmeshptr->gethadaptedpointer();
+    isloaded = true;
+}
+
 mesh::mesh(std::string filename, int globalgeometryskin, int numoverlaplayers, int verbosity)
 {
     rawmeshptr = std::shared_ptr<rawmesh>(new rawmesh());
@@ -100,6 +109,14 @@ void mesh::load(std::vector<shape> inputshapes, int globalgeometryskin, int numo
 {
     errorifloaded();
     rawmeshptr->load(inputshapes, globalgeometryskin, numoverlaplayers, verbosity);
+    universe::myrawmesh = rawmeshptr->gethadaptedpointer();
+    isloaded = true;
+}
+
+void mesh::load(std::vector<std::tuple<double, double, double,bool>>& nodes, std::vector<std::vector<unsigned int>>& elems, bool rotation_enabled, int verbosity)
+{
+    errorifloaded();
+    rawmeshptr->load(nodes, elems, -1, -1, rotation_enabled, verbosity);
     universe::myrawmesh = rawmeshptr->gethadaptedpointer();
     isloaded = true;
 }

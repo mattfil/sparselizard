@@ -298,6 +298,16 @@ void rawmat::process(std::vector<bool>& isconstrained)
     MatAssemblyEnd(Dmat, MAT_FINAL_ASSEMBLY);
 }
 
+tuple<indexmat,indexmat, densemat> rawmat::get_Acsr()
+{
+    return make_tuple(Arows,Acols,Avals);
+}
+
+tuple<indexmat, indexmat, densemat> rawmat::get_Dcsr()
+{
+    return make_tuple(Drows, Dcols, Dvals);
+}
+
 void rawmat::clearfragments(void)
 {
     accumulatedrowindices = {};

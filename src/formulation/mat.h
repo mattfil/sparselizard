@@ -85,7 +85,7 @@ class mat
         mat operator+(mat input);
         mat operator-(mat input);
         vec operator*(vec input);
-        
+
 };
 
 mat operator*(double, mat);

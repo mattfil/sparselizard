@@ -91,6 +91,8 @@ class rawmat
         std::shared_ptr<dofmanager> getdofmanager(void);
         
         KSP* getksp(void);
+        std::tuple<indexmat, indexmat, densemat> get_Acsr();
+        std::tuple<indexmat, indexmat, densemat> get_Dcsr();
 
 };
 

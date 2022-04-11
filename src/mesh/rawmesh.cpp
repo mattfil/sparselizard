@@ -421,6 +421,166 @@ void rawmesh::load(bool mergeduplicates, std::vector<std::string> meshfiles, int
     }
 }
 
+void rawmesh::load(std::vector<std::tuple<double, double, double,bool>>& nodes_d, std::vector<std::vector<unsigned int>>& whole_mesh, int globalgeometryskin, int numoverlaplayers,bool rotation, int verbosity)
+{
+
+    wallclock loadtime;
+
+    // We are in the node section and now get the node coordinates (doubles):
+    mynodes.setnumber(nodes_d.size());
+    std::vector<double>* nodecoordinates = mynodes.getcoordinates();
+
+    std::vector<int> shifted_regions;
+    //std::vector<bool> is_shifted_node(nodes_d.size(),false);
+    double shifting = 1;
+    double ref_newz = 0;
+    for (int i = 0; i < nodes_d.size(); i++)
+    {
+        // Read now the x, y and z node coordinate:
+        nodecoordinates->at(3 * i + 0) =  get<0>(nodes_d[i]);
+        nodecoordinates->at(3 * i + 1) = get<1>(nodes_d[i]);
+        if (rotation==false)
+            nodecoordinates->at(3 * i + 2) = get<2>(nodes_d[i]);
+        else
+        {
+            nodecoordinates->at(3 * i + 2) = (get<3>(nodes_d[i]) == true) ? get<2>(nodes_d[i]) + shifting : get<2>(nodes_d[i]);
+            if (ref_newz == 0) ref_newz = get<2>(nodes_d[i]) + shifting;
+        }
+    }
+
+
+    // We are in the element section and now fill in 'myelements' and 'myphysicalregions':
+    int elementindexincurrenttype = 0;
+    std::vector<int> nodesinpreviouselement = {};
+
+    for (int i = 0; i < whole_mesh.size(); i++)
+    {
+
+        // Read now the element type number and define the element object:
+        int currentcurvedelementtype = (int)whole_mesh[i][0];// convertgmshelementtypenumber(std::stoi(stringobject.getstringtonextwhitespace()));
+        element elementobject(currentcurvedelementtype);
+        // Get the uncurved element type number:
+        int currentelementtype = elementobject.gettypenumber();
+        int curvatureorder = elementobject.getcurvatureorder();
+        int elemdim = elementobject.getelementdimension();
+
+        // Read now the number of parameters (integers). First parameter is the physical region, we skip the other ones:
+        int numberofparameters = (int)whole_mesh[i].size();
+        // Read only the first parameter:
+        int currentphysicalregionnumber = (int)whole_mesh[i][1];
+
+        // Get the physical region object associated to 'currentphysicalregionnumber':
+        physicalregion* currentphysicalregion = myphysicalregions.get(universe::physregshift * (elemdim + 1) + currentphysicalregionnumber);
+        // Read now the node number list in the element. The number of nodes depends on the element:
+        std::vector<int>  nodesincurrentelement(elementobject.countcurvednodes());
+        for (int j = 0; j < elementobject.countcurvednodes(); j++)
+        {
+            nodesincurrentelement[j] = (int)whole_mesh[i][j + 2]; // -1 to start numbering nodes at 0
+        }
+
+        // If the current element is the same as the previous one then the element is already
+        // in the 'myelements' object and it only has to be added to the physical region. 
+        // This can often occurs in some .msh files.
+        if (nodesinpreviouselement == nodesincurrentelement)
+        {
+            currentphysicalregion->addelement(currentelementtype, elementindexincurrenttype);
+            continue;
+        }
+
+        // In case it is a new element add the element AND its physical region.
+        elementindexincurrenttype = myelements.add(currentelementtype, curvatureorder, nodesincurrentelement);
+        currentphysicalregion->addelement(currentelementtype, elementindexincurrenttype);
+        
+        nodesinpreviouselement = nodesincurrentelement;
+    }
+    
+    splitmesh();
+    mynodes.fixifaxisymmetric();
+    myelements.explode();
+    removeduplicates();
+    myregiondefiner.defineregions();
+    
+
+    // For DDM:
+    mydtracker = std::shared_ptr<dtracker>(new dtracker(shared_from_this(), globalgeometryskin, numoverlaplayers));
+    if (mydtracker->isdefined())
+    {
+        mydtracker->discoverconnectivity(10, verbosity);
+        mydtracker->overlap();
+    }
+
+    myelements.definedisjointregions();
+    // The reordering is stable and the elements are thus still ordered 
+    // by barycenter coordinates in every disjoint region!
+    myelements.reorderbydisjointregions();
+    myelements.definedisjointregionsranges();
+
+
+    // For DDM:
+    long long int* orientrenum = NULL;
+    if (mydtracker->isdefined())
+    {
+        mydtracker->mapinterfaces();
+        mydtracker->createglobalnodenumbers();
+        orientrenum = mydtracker->getglobalnodenumbers();
+    }
+
+    // Define the physical regions based on the disjoint regions they contain:
+    for (int physregindex = 0; physregindex < myphysicalregions.count(); physregindex++)
+    {
+        physicalregion* currentphysicalregion = myphysicalregions.getatindex(physregindex);
+        currentphysicalregion->definewithdisjointregions();
+    }
+
+    myelements.orient(orientrenum);
+    //errorondisconnecteddisjointregion();
+    //myhadaptedmesh = copy();
+    //myhadaptedmesh->write("try1.msh", 1);
+
+    if (verbosity > 0)
+        printcount();
+    if (verbosity > 1)
+        printelementsinphysicalregions();
+    if (verbosity > 0)
+        loadtime.print("Time to load the mesh: ");
+
+    // Make sure axisymmetry is valid for this mesh:    
+    if (universe::isaxisymmetric && getmeshdimension() != 2)
+    {
+        std::cout << "Error in 'mesh' object: axisymmetry is only allowed for 2D problems" << std::endl;
+        abort();
+    }
+
+    mynumber = 0;
+
+    myptracker = std::shared_ptr<ptracker>(new ptracker(myelements.count()));
+    myptracker->updatedisjointregions(&mydisjointregions);
+
+    myhtracker = std::shared_ptr<htracker>(new htracker(shared_from_this()));
+    //myhadaptedmesh = copy();
+    //myhadaptedmesh->write("try2.msh",1);
+    //for (size_t ii = 0; ii < 2; ii++)
+    //{
+    //    //shift(stator_ids[ii], 0, 0, -shifting);
+    //    myhadaptedmesh->shift(stator_ids[ii], 0, 0, -shifting);
+    //}
+
+    std::vector<double>* coords = mynodes.getcoordinates();
+
+    if (rotation)
+    {
+        for (int n = 0; n < mynodes.count(); n++)
+        {
+            if (coords->at(3 * n + 2) == ref_newz) coords->at(3 * n + 2) -= shifting;
+        }
+        myelements.cleancoordinatedependentcontainers();
+        mynodes.fixifaxisymmetric();
+    }
+
+    myhadaptedmesh = copy();
+    //myhadaptedmesh->write("culonew.msh", 1);
+}
+
 void rawmesh::load(std::vector<shape> inputshapes, int globalgeometryskin, int numoverlaplayers, int verbosity)
 {
     // Do not call this when the mesh is already loaded!
@@ -720,7 +880,7 @@ void rawmesh::shift(int physreg, double x, double y, double z)
             coords->at(3*n+2) += z;
         }
     }
-
+    
     myelements.cleancoordinatedependentcontainers();
     
     mynodes.fixifaxisymmetric();
