@@ -33,6 +33,7 @@ target_compile_options(sparselizardDLL PUBLIC -fPIC -no-pie -O3)
 target_compile_features(sparselizardLIB PRIVATE cxx_std_11)
 target_compile_options(sparselizardLIB PUBLIC -fPIC -no-pie -O3)
 
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp /Za /std:c++14 /MP")
 
 ConfigureBLAS(sparselizardDLL)
