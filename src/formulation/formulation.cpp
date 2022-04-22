@@ -1,6 +1,5 @@
 #include "formulation.h"
 
-
 formulation::formulation(void)
 {
     if (universe::myrawmesh == NULL)
