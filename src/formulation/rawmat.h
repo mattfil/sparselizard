@@ -93,7 +93,7 @@ class rawmat
         KSP* getksp(void);
         std::tuple<indexmat, indexmat, densemat> get_Acsr();
         std::tuple<indexmat, indexmat, densemat> get_Dcsr();
-
+        void freeADpetscpointers() { Amat = PETSC_NULL, Dmat = PETSC_NULL; }
 };
 
 #endif
