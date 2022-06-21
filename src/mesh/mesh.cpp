@@ -121,16 +121,16 @@ void mesh::load(std::vector<std::tuple<double, double, double,bool>>& nodes, std
     isloaded = true;
 }
 
-void mesh::write(std::string name, int verbosity)
+void mesh::write(std::string name, std::vector<int> physregs, int option)
 {
     errorifnotloaded();
-    
+
     if (std::abs(option) != 1)
     {
         std::cout << "Error in 'mesh' object: write option must be -1 or +1" << std::endl;
-        abort();   
+        abort();
     }
-    
+
     rawmeshptr->gethadaptedpointer()->write(name, physregs, option);
 }
 
