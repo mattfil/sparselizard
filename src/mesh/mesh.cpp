@@ -124,7 +124,14 @@ void mesh::load(std::vector<std::tuple<double, double, double,bool>>& nodes, std
 void mesh::write(std::string name, int verbosity)
 {
     errorifnotloaded();
-    rawmeshptr->gethadaptedpointer()->write(name, verbosity);
+    
+    if (std::abs(option) != 1)
+    {
+        std::cout << "Error in 'mesh' object: write option must be -1 or +1" << std::endl;
+        abort();   
+    }
+    
+    rawmeshptr->gethadaptedpointer()->write(name, physregs, option);
 }
 
 void mesh::setadaptivity(expression criterion, int lownumsplits, int highnumsplits)
