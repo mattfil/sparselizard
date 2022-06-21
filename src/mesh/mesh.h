@@ -60,7 +60,7 @@ class mesh
         void load(std::vector<shape> inputshapes, int globalgeometryskin, int numoverlaplayers, int verbosity = 1);
         void load(std::vector<std::tuple<double, double, double,bool>>& nodes, std::vector<std::vector<unsigned int>>& connections, bool rotation_enabled, int verbosity = 1);
         // Write to file name:
-        void write(std::string name, int verbosity = 1);     
+        void write(std::string name, std::vector<int> physregs = {-1}, int option = 1);
         
         // H-adaptivity:
         void setadaptivity(expression criterion, int lownumsplits, int highnumsplits);

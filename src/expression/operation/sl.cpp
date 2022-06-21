@@ -9,17 +9,17 @@
 
 int sl::getversion(void)
 {
-    return 202111;
+    return 202205;
 }
 
 int sl::getsubversion(void)
 {
-    return 10;
+    return 0;
 }
 
 std::string sl::getversionname(void)
 {
-    return "elegant elk";
+    return "friendly fox";
 }
 
 void sl::printversion(void)
@@ -43,9 +43,34 @@ int sl::getmaxnumthreads(void)
     return universe::getmaxnumthreads();
 }
 
+field sl::getx(void)
+{
+    return field("x");
+}
+
+field sl::gety(void)
+{
+    return field("y");
+}
+
+field sl::getz(void)
+{
+    return field("z");
+}
+
 double sl::getpi(void)
 {
     return 3.1415926535897932384;
+}
+
+double sl::getmu0(void)
+{
+    return 1.2566370621219e-6;
+}
+
+double sl::getepsilon0(void)
+{
+    return 8.854187812813e-12;
 }
 
 double sl::getrandom(void)
