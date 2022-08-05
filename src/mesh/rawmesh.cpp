@@ -280,8 +280,6 @@ void rawmesh::load(std::string name, int globalgeometryskin, int numoverlaplayer
     }
     
     myelements.definedisjointregions();
-    // The reordering is stable and the elements are thus still ordered 
-    // by barycenter coordinates in every disjoint region!
     myelements.reorderbydisjointregions();
     myelements.definedisjointregionsranges();
     
@@ -294,12 +292,7 @@ void rawmesh::load(std::string name, int globalgeometryskin, int numoverlaplayer
         orientrenum = mydtracker->getglobalnodenumbers();
     }
     
-    // Define the physical regions based on the disjoint regions they contain:
-    for (int physregindex = 0; physregindex < myphysicalregions.count(); physregindex++)
-    {
-        physicalregion* currentphysicalregion = myphysicalregions.getatindex(physregindex);
-        currentphysicalregion->definewithdisjointregions();
-    }
+    myphysicalregions.definewithdisjointregions();
     
     myelements.orient(orientrenum);
     errorondisconnecteddisjointregion();
@@ -672,8 +665,6 @@ void rawmesh::load(std::vector<shape> inputshapes, int globalgeometryskin, int n
     }
     
     myelements.definedisjointregions();
-    // The reordering is stable and the elements are thus still ordered 
-    // by barycenter coordinates in every disjoint region!
     myelements.reorderbydisjointregions();
     myelements.definedisjointregionsranges();
     
@@ -686,12 +677,7 @@ void rawmesh::load(std::vector<shape> inputshapes, int globalgeometryskin, int n
         orientrenum = mydtracker->getglobalnodenumbers();
     }
     
-    // Define the physical regions based on the disjoint regions they contain:
-    for (int physregindex = 0; physregindex < myphysicalregions.count(); physregindex++)
-    {
-        physicalregion* currentphysicalregion = myphysicalregions.getatindex(physregindex);
-        currentphysicalregion->definewithdisjointregions();
-    }
+    myphysicalregions.definewithdisjointregions();
     
     myelements.orient(orientrenum);
     errorondisconnecteddisjointregion();
@@ -1372,12 +1358,7 @@ bool rawmesh::adaptp(std::vector<std::vector<std::vector<int>>>& neworders, int 
 
     myelements.definedisjointregionsranges();
     
-    // Define the physical regions based on the disjoint regions they contain:
-    for (int physregindex = 0; physregindex < myphysicalregions.count(); physregindex++)
-    {
-        physicalregion* currentphysicalregion = myphysicalregions.getatindex(physregindex);
-        currentphysicalregion->definewithdisjointregions();
-    }
+    myphysicalregions.definewithdisjointregions();
     
 
     ///// New mesh version:
@@ -1801,12 +1782,7 @@ bool rawmesh::adapth(std::vector<std::vector<int>>& groupkeepsplit, int verbosit
         orientrenum = myhadaptedmesh->mydtracker->getglobalnodenumbers();
     }
     
-    // Define the physical regions based on the disjoint regions they contain:
-    for (int physregindex = 0; physregindex < myhadaptedmesh->myphysicalregions.count(); physregindex++)
-    {
-        physicalregion* currentphysicalregion = myhadaptedmesh->myphysicalregions.getatindex(physregindex);
-        currentphysicalregion->definewithdisjointregions();
-    }
+    myhadaptedmesh->myphysicalregions.definewithdisjointregions();
     
     myhadaptedmesh->myelements.orient(orientrenum);
     myhadaptedmesh->errorondisconnecteddisjointregion();

@@ -28,15 +28,17 @@ void rawfield::synchronize(std::vector<int> physregsfororder, std::vector<int> d
     std::shared_ptr<rawfield> originalthis(new rawfield);
     *originalthis = *this;
     
+    disjointregions* drs = universe::getrawmesh()->getdisjointregions();
+    
     // Create a new coef manager:
-    mycoefmanager = std::shared_ptr<coefmanager>(new coefmanager(mytypename, universe::getrawmesh()->getdisjointregions()));
+    mycoefmanager = std::shared_ptr<coefmanager>(new coefmanager(mytypename, drs));
     
     // Flush the containers:
-    interpolationorder = std::vector<int>( (universe::getrawmesh()->getdisjointregions())->count(), -1);
-    mydisjregconstraints = std::vector<std::shared_ptr<integration>>( (universe::getrawmesh()->getdisjointregions())->count(), NULL);
-    myconditionalconstraints = std::vector<std::vector<expression>>( (universe::getrawmesh()->getdisjointregions())->count(), std::vector<expression>(0));
-    isitgauged = std::vector<bool>( (universe::getrawmesh()->getdisjointregions())->count(), false);
-    isitported = std::vector<bool>( (universe::getrawmesh()->getdisjointregions())->count(), false);
+    interpolationorder = std::vector<int>(drs->count(), -1);
+    mydisjregconstraints = std::vector<std::shared_ptr<std::tuple<int, int, std::vector<expression>, expression, int, int>>>(drs->count(), NULL);
+    myconditionalconstraints = std::vector<std::vector<expression>>(drs->count(), std::vector<expression>(0));
+    isitgauged = std::vector<bool>(drs->count(), false);
+    isitported = std::vector<bool>(drs->count(), false);
     
     // Rebuild the containers:
     if (disjregsfororder.size() == 0)
@@ -73,10 +75,10 @@ void rawfield::synchronize(std::vector<int> physregsfororder, std::vector<int> d
     // This forces the lowest order on all ports (overwrites also p-adaptivity):
     for (int i = 0; i < myporttracker.size(); i++)
         setport(std::get<0>(myporttracker[i]), std::get<1>(myporttracker[i]), std::get<2>(myporttracker[i]));
-        
+    
     // Update the coef manager with the new nodal/edge/face/volume shape function coefficients:
     if (isvaluesynchronizingallowed)
-        updateshapefunctions(originalthis, false);
+        updateshapefunctions(sl::athp(field(originalthis), myrawmesh, myptracker), NULL, {drs->getindim(0), drs->getindim(1), drs->getindim(2), drs->getindim(3)}, myupdateaccuracy);
     
         
     // Update the mesh tracker to the current one:
@@ -85,34 +87,36 @@ void rawfield::synchronize(std::vector<int> physregsfororder, std::vector<int> d
     issynchronizing = false;
 }
 
-void rawfield::updateshapefunctions(std::shared_ptr<rawfield> originalthis, bool withtiming)
+void rawfield::updateshapefunctions(expression updateexpr, expression* meshdeform, std::vector<std::vector<int>> drsindims, int updateaccuracy, bool withtiming)
 {
     // Only do a projection. No constraint calculation.
-    std::vector<std::shared_ptr<integration>> mydisjregconstraintsbkp = mydisjregconstraints;
+    std::vector<std::shared_ptr<std::tuple<int, int, std::vector<expression>, expression, int, int>>> mydisjregconstraintsbkp = mydisjregconstraints;
     std::vector<std::vector<expression>> myconditionalconstraintsbkp = myconditionalconstraints;
     std::vector<bool> isitgaugedbkp = isitgauged;
     std::vector<bool> isitportedbkp = isitported;
     
-    mydisjregconstraints = std::vector<std::shared_ptr<integration>>( (universe::getrawmesh()->getdisjointregions())->count(), NULL);
-    myconditionalconstraints = std::vector<std::vector<expression>>( (universe::getrawmesh()->getdisjointregions())->count(), std::vector<expression>(0));
-    isitgauged = std::vector<bool>( (universe::getrawmesh()->getdisjointregions())->count(), false);
-    isitported = std::vector<bool>( (universe::getrawmesh()->getdisjointregions())->count(), false);
-        
+    disjointregions* drs = universe::getrawmesh()->getdisjointregions();
+    
+    mydisjregconstraints = std::vector<std::shared_ptr<std::tuple<int, int, std::vector<expression>, expression, int, int>>>(drs->count(), NULL);
+    myconditionalconstraints = std::vector<std::vector<expression>>(drs->count(), std::vector<expression>(0));
+    isitgauged = std::vector<bool>(drs->count(), false);
+    isitported = std::vector<bool>(drs->count(), false);
+
 
     wallclock clkn;
-    updatenodalshapefunctions(originalthis);
+    updatenodalshapefunctions(updateexpr, meshdeform, drsindims);
     if (withtiming)
         clkn.print("Time to update the nodal shape functions:");
     wallclock clke;
-    updateothershapefunctions(originalthis,1);
+    updateothershapefunctions(1, updateexpr, meshdeform, drsindims, updateaccuracy);
     if (withtiming)
         clke.print("Time to update the edge shape functions:");
     wallclock clkf;
-    updateothershapefunctions(originalthis,2);
+    updateothershapefunctions(2, updateexpr, meshdeform, drsindims, updateaccuracy);
     if (withtiming)
         clkf.print("Time to update the face shape functions:");
     wallclock clkv;
-    updateothershapefunctions(originalthis,3);
+    updateothershapefunctions(3, updateexpr, meshdeform, drsindims, updateaccuracy);
     if (withtiming)
     {
         clkv.print("Time to update the volume shape functions:");
@@ -127,35 +131,39 @@ void rawfield::updateshapefunctions(std::shared_ptr<rawfield> originalthis, bool
     isitported = isitportedbkp;
 }
 
-void rawfield::updatenodalshapefunctions(std::shared_ptr<rawfield> originalthis)
+void rawfield::updatenodalshapefunctions(expression updateexpr, expression* meshdeform, std::vector<std::vector<int>> drsindims)
 {
     field thisfield = field(shared_from_this());
     
-    if (gettypename() != "h1")
+    if (gettypename() != "h1" || drsindims[0].size() == 0)
         return;
         
+    physicalregions* prs = universe::getrawmesh()->getphysicalregions();
+        
     // Create temporary physical regions:
-    std::vector<int> alldrsindim = universe::getrawmesh()->getdisjointregions()->getindim(0);
-    int physreg = universe::getrawmesh()->getphysicalregions()->createfromdisjointregionlist(alldrsindim);
+    int physreg = prs->createfromdisjointregionlist(drsindims[0]);
     
     formulation evalatnodes;
     
-    integration myterm(physreg, -sl::athp(field(originalthis), myrawmesh, myptracker) * sl::tf(thisfield));
+    integration myterm;
+    if (meshdeform == NULL)
+        myterm = integration(physreg, -updateexpr * sl::tf(thisfield));
+    else
+        myterm = integration(physreg, *meshdeform, -updateexpr * sl::tf(thisfield));
     myterm.isbarycentereval = true;    
     
     evalatnodes += myterm;
 
     evalatnodes.generaterhs();
-    vec vals = evalatnodes.rhs();
+    vec vals = evalatnodes.rhs(false, false);
     
     setdata(physreg, vals|thisfield);
-    universe::getrawmesh()->getphysicalregions()->remove({physreg}, false);
+    prs->remove({physreg}, false);
 }
 
-void rawfield::updateothershapefunctions(std::shared_ptr<rawfield> originalthis, int dim) // dim can be 1, 2 or 3
+void rawfield::updateothershapefunctions(int dim, expression updateexpr, expression* meshdeform, std::vector<std::vector<int>> drsindims, int updateaccuracy) // dim can be 1, 2 or 3
 {
-    int meshdim = universe::getrawmesh()->getmeshdimension();
-    if (dim > meshdim)
+    if (drsindims[dim].size() == 0)
         return;
 
     std::string tn = gettypename();
@@ -165,14 +173,14 @@ void rawfield::updateothershapefunctions(std::shared_ptr<rawfield> originalthis,
     physicalregions* prs = universe::getrawmesh()->getphysicalregions();
     
     // Create temporary physical regions:
-    int physreg = prs->createfromdisjointregionlist(drs->getindim(dim));
+    int physreg = prs->createfromdisjointregionlist(drsindims[dim]);
     int dirichletphysreg;
     if (dim == 1)
-        dirichletphysreg = prs->createfromdisjointregionlist(drs->getindim(0));
+        dirichletphysreg = prs->createfromdisjointregionlist(drsindims[0]);
     if (dim == 2)
-        dirichletphysreg = prs->createfromdisjointregionlist(gentools::concatenate({drs->getindim(0),drs->getindim(1)}));
+        dirichletphysreg = prs->createfromdisjointregionlist(gentools::concatenate({drsindims[0],drsindims[1]}));
     if (dim == 3)
-        dirichletphysreg = prs->createfromdisjointregionlist(gentools::concatenate({drs->getindim(0),drs->getindim(1),drs->getindim(2)}));
+        dirichletphysreg = prs->createfromdisjointregionlist(gentools::concatenate({drsindims[0],drsindims[1],drsindims[2]}));
     
     // The Dirichlet constraints (if any) are added to the rhs of the projection.
     //
@@ -183,13 +191,16 @@ void rawfield::updateothershapefunctions(std::shared_ptr<rawfield> originalthis,
     // Create the formulation to get block A and v:
     formulation blockAv;
     // A and v blocks of the projection:
-    blockAv += sl::integral(physreg, sl::dof(thisfield) * sl::tf(thisfield) - sl::athp(field(originalthis), myrawmesh, myptracker) * sl::tf(thisfield), myupdateaccuracy);
+    if (meshdeform == NULL)
+        blockAv += sl::integral(physreg, sl::dof(thisfield) * sl::tf(thisfield) - updateexpr * sl::tf(thisfield), updateaccuracy);
+    else
+        blockAv += sl::integral(physreg, *meshdeform, sl::dof(thisfield) * sl::tf(thisfield) - updateexpr * sl::tf(thisfield), updateaccuracy);
   
     std::shared_ptr<dofmanager> dm = blockAv.getdofmanager();
     dm->selectfield(shared_from_this());
     
     // Get the block diagonal info:
-    std::vector<int> alldrsindim = drs->getindim(dim);
+    std::vector<int> alldrsindim = drsindims[dim];
     // Count the number of non-empty diagonal blocks:
     int numblocks = 0, preallocsize = 0;
     for (int d = 0; d < alldrsindim.size(); d++)
@@ -233,16 +244,17 @@ void rawfield::updateothershapefunctions(std::shared_ptr<rawfield> originalthis,
         // Get blocks A and v:
         blockAv.generate();
         mat A = blockAv.A();
-        vec v = blockAv.rhs();
+        vec v = blockAv.rhs(false, false);
         
         if (dim > 1 || tn == "h1")
         {
             // Create the formulation to get block B and w:
             formulation blockB;
-            // To get the structure right:
-            blockB += sl::integral(dirichletphysreg, 0 * sl::dof(thisfield) * sl::tf(thisfield), myupdateaccuracy);
             // B block of the projection:
-            blockB += sl::integral(physreg, sl::dof(thisfield, dirichletphysreg) * sl::tf(thisfield), myupdateaccuracy);
+            if (meshdeform == NULL)
+                blockB += sl::integral(physreg, sl::dof(thisfield, dirichletphysreg) * sl::tf(thisfield), updateaccuracy);
+            else
+                blockB += sl::integral(physreg, *meshdeform, sl::dof(thisfield, dirichletphysreg) * sl::tf(thisfield), updateaccuracy);
             // Get block B:
             blockB.generatestiffnessmatrix();
             mat B = blockB.A();
@@ -277,8 +289,8 @@ void rawfield::updateothershapefunctions(std::shared_ptr<rawfield> originalthis,
 
         setdata(physreg, v|thisfield);
     }
-    universe::getrawmesh()->getphysicalregions()->remove({dirichletphysreg}, false);
-    universe::getrawmesh()->getphysicalregions()->remove({physreg}, false);
+    prs->remove({dirichletphysreg}, false);
+    prs->remove({physreg}, false);
 }
 
 void rawfield::allowsynchronizing(bool allowit)
@@ -391,19 +403,21 @@ rawfield::rawfield(std::string fieldtypename, const std::vector<int> harmonicnum
             myrawmesh = universe::getrawmesh();
         
             myptracker = universe::getrawmesh()->getptracker();
+            
+            disjointregions* drs = myrawmesh->getdisjointregions();
         
             // Set a -1 undefined interpolation order by default:
-            interpolationorder = std::vector<int>( (universe::getrawmesh()->getdisjointregions())->count(), -1);
+            interpolationorder = std::vector<int>(drs->count(), -1);
             // Set all unconstrained by default:
-            mydisjregconstraints = std::vector<std::shared_ptr<integration>>( (universe::getrawmesh()->getdisjointregions())->count(), NULL);
+            mydisjregconstraints = std::vector<std::shared_ptr<std::tuple<int, int, std::vector<expression>, expression, int, int>>>(drs->count(), NULL);
             
-            myconditionalconstraints = std::vector<std::vector<expression>>( (universe::getrawmesh()->getdisjointregions())->count(), std::vector<expression>(0));
+            myconditionalconstraints = std::vector<std::vector<expression>>(drs->count(), std::vector<expression>(0));
 
-            isitgauged = std::vector<bool>( (universe::getrawmesh()->getdisjointregions())->count(), false);
+            isitgauged = std::vector<bool>(drs->count(), false);
             
-            isitported = std::vector<bool>( (universe::getrawmesh()->getdisjointregions())->count(), false);
+            isitported = std::vector<bool>(drs->count(), false);
 
-            mycoefmanager = std::shared_ptr<coefmanager>(new coefmanager(mytypename, universe::getrawmesh()->getdisjointregions()));
+            mycoefmanager = std::shared_ptr<coefmanager>(new coefmanager(mytypename, drs));
         }
     }
     return;
@@ -423,7 +437,7 @@ rawfield::rawfield(dofmanager* dm, std::shared_ptr<rawmesh> rm, std::shared_ptr<
     
     interpolationorder = dm->getselectedfieldorders();
     
-    mydisjregconstraints = std::vector<std::shared_ptr<integration>>(numdrs, NULL);
+    mydisjregconstraints = std::vector<std::shared_ptr<std::tuple<int, int, std::vector<expression>, expression, int, int>>>(numdrs, NULL);
     myconditionalconstraints = std::vector<std::vector<expression>>(numdrs, std::vector<expression>(0));
     isitgauged = std::vector<bool>(numdrs, false);
     isitported = std::vector<bool>(numdrs, false);
@@ -805,7 +819,7 @@ void rawfield::setport(int physreg, std::shared_ptr<rawport> primal, std::shared
     }
 }
 
-void rawfield::setvalue(int physreg, int numfftharms, expression* meshdeform, expression input, int extraintegrationdegree)
+void rawfield::setvalue(int physreg, int numfftharms, expression* meshdeform, expression input, int eio)
 {
     synchronize();
     
@@ -819,33 +833,31 @@ void rawfield::setvalue(int physreg, int numfftharms, expression* meshdeform, ex
         std::cout << "Error in 'rawfield' object: the rawfield value must be set with a " << countcomponents() << "x1 expression" << std::endl;
         abort();
     }
-    
-    // Set the values on the sub fields:
-    for (int i = 0; i < mysubfields.size(); i++)
-        mysubfields[i][0]->setvalue(physreg, numfftharms, meshdeform, input.at(i,0), extraintegrationdegree);
 
-    if (mysubfields.size() == 0)
+    // Set the values on the subfields:
+    if (mysubfields.size() > 0)
     {
-        field thisfield(getpointer());
-    
-        // Compute the projection of the expression (skip for a zero expression):
-        formulation projectedvalue;
-        if (meshdeform == NULL)
-            projectedvalue += integration(physreg, numfftharms, sl::dof(thisfield)*sl::tf(thisfield) - sl::tf(thisfield)*input, extraintegrationdegree);
-        else
-            projectedvalue += integration(physreg, numfftharms, *meshdeform, sl::dof(thisfield)*sl::tf(thisfield) - sl::tf(thisfield)*input, extraintegrationdegree);
-        // Define an all-zero vector:
-        vec solvec(projectedvalue);
-        if (input.iszero() == false)
-        {
-            projectedvalue.generate();
-            solvec = sl::solve(projectedvalue.A(), projectedvalue.b());
-        }
-        else
-            solvec.updateconstraints();
-        
-        setdata(physreg, solvec|thisfield, "set");
+        for (int i = 0; i < mysubfields.size(); i++)
+            mysubfields[i][0]->setvalue(physreg, numfftharms, meshdeform, input.at(i,0), eio);
+        return;
     }
+    // Set the values on the harmonics:
+    if (myharmonics.size() > 0)
+    {
+        for (int h = 0; h < myharmonics.size(); h++)
+        {
+            if (myharmonics[h].size() > 0)
+                myharmonics[h][0]->setvalue(physreg, numfftharms, meshdeform, sl::getharmonic(h, input, numfftharms), eio);
+        }
+        return;
+    }
+    
+    physicalregion* curpr = getrawmesh()->getphysicalregions()->get(physreg);
+    
+    if (input.iszero())
+        getpointer()->setzerovalue(physreg);
+    else
+        getpointer()->updateshapefunctions(input, meshdeform, {curpr->getdisjointregions(0), curpr->getdisjointregions(1), curpr->getdisjointregions(2), curpr->getdisjointregions(3)}, eio);
 }
 
 void rawfield::setvalue(int physreg)
@@ -1108,7 +1120,26 @@ densemat rawfield::getnodalvalues(indexmat nodenumbers)
     return output;
 }
 
-void rawfield::setdisjregconstraint(int physreg, int numfftharms, expression* meshdeform, expression input, int extraintegrationdegree)
+void rawfield::setzerovalue(int physreg)
+{
+    synchronize();
+
+    // Get all disjoint regions in the physical region:
+    std::vector<int> disjregs = universe::getrawmesh()->getphysicalregions()->get(physreg)->getdisjointregions(-1);
+
+    for (int i = 0; i < disjregs.size(); i++)
+    {
+        int numelems = universe::getrawmesh()->getdisjointregions()->countelements(disjregs[i]);
+
+        for (int ff = 0; ff < mycoefmanager->countformfunctions(disjregs[i]); ff++)
+        {
+            for (int elem = 0; elem < numelems; elem++)
+                mycoefmanager->setcoef(disjregs[i], ff, elem, 0);
+        }
+    }
+}
+
+void rawfield::setdisjregconstraint(int physreg, int numfftharms, expression* meshdeform, expression input, int eio)
 {
     synchronize();
     
@@ -1127,7 +1158,7 @@ void rawfield::setdisjregconstraint(int physreg, int numfftharms, expression* me
     if (mysubfields.size() > 0)
     {
         for (int i = 0; i < mysubfields.size(); i++)
-            mysubfields[i][0]->setdisjregconstraint(physreg, numfftharms, meshdeform, input.at(i,0), extraintegrationdegree);
+            mysubfields[i][0]->setdisjregconstraint(physreg, numfftharms, meshdeform, input.at(i,0), eio);
         return;
     }
     // Set the constraints on the harmonics:
@@ -1136,39 +1167,36 @@ void rawfield::setdisjregconstraint(int physreg, int numfftharms, expression* me
         for (int h = 0; h < myharmonics.size(); h++)
         {
             if (myharmonics[h].size() > 0)
-                myharmonics[h][0]->setdisjregconstraint(physreg, numfftharms, meshdeform, sl::getharmonic(h, input, numfftharms), extraintegrationdegree);
+                myharmonics[h][0]->setdisjregconstraint(physreg, numfftharms, meshdeform, sl::getharmonic(h, input, numfftharms), eio);
         }
         return;
     }
 
+    std::vector<expression> mdv = {};
+    if (meshdeform != NULL)
+        mdv = {*meshdeform};
+
     if (issynchronizing == false)
+        mydisjregconstrainttracker.push_back(std::make_tuple(physreg, numfftharms, mdv, input, eio));
+
+    // Find the highest tag:
+    int maxtag = -1;
+    for (int i = 0; i < mydisjregconstraints.size(); i++)
     {
-        std::vector<expression> mdv = {};
-        if (meshdeform != NULL)
-            mdv = {*meshdeform};
-        mydisjregconstrainttracker.push_back(std::make_tuple(physreg, numfftharms, mdv, input, extraintegrationdegree));
+        if (mydisjregconstraints[i] != NULL)
+            maxtag = std::max(maxtag, std::get<5>(*mydisjregconstraints[i]));
     }
-    
-    // Consider ALL disjoint regions in the physical region with (-1):
+    std::shared_ptr<std::tuple<int,int,std::vector<expression>,expression,int,int>> ci(new std::tuple<int,int,std::vector<expression>,expression,int,int>{physreg, numfftharms, mdv, input, eio, maxtag+1});
+
+    // Consider all disjoint regions in the physical region with (-1):
     std::vector<int> selecteddisjregs = ((universe::getrawmesh()->getphysicalregions())->get(physreg))->getdisjointregions(-1);
-
-    field thisfield(getpointer());
-    std::shared_ptr<integration> disjregconstraintcomputation;
     
-    if (meshdeform == NULL)
-        disjregconstraintcomputation = std::shared_ptr<integration>(new integration(physreg, numfftharms, sl::dof(thisfield)*sl::tf(thisfield) - sl::tf(thisfield)*input, extraintegrationdegree));
-    else
-        disjregconstraintcomputation = std::shared_ptr<integration>(new integration(physreg, numfftharms, *meshdeform, sl::dof(thisfield)*sl::tf(thisfield) - sl::tf(thisfield)*input, extraintegrationdegree));
-    
-    if (input.iszero())
-        disjregconstraintcomputation->isprojectionofzero = true;
-
     for (int i = 0; i < selecteddisjregs.size(); i++)
     {
         // Ports have priority over the disjreg constraints!
         if (isitported[selecteddisjregs[i]] == false)
         {
-            mydisjregconstraints[selecteddisjregs[i]] = disjregconstraintcomputation;
+            mydisjregconstraints[selecteddisjregs[i]] = ci;
             myconditionalconstraints[selecteddisjregs[i]] = {};
             isitgauged[selecteddisjregs[i]] = false;
         }
@@ -1746,7 +1774,7 @@ bool rawfield::isdisjregconstrained(int disjreg)
     return not(mydisjregconstraints[disjreg] == NULL);
 }
 
-std::vector<std::shared_ptr<integration>> rawfield::getdisjregconstraints(void)
+std::vector<std::shared_ptr<std::tuple<int, int, std::vector<expression>, expression, int, int>>> rawfield::getdisjregconstraints(void)
 {
     synchronize();
     

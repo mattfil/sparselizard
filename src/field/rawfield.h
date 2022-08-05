@@ -30,7 +30,6 @@
 #include "coefmanager.h"
 #include "universe.h"
 #include "expression.h"
-#include "integration.h"
 #include "sl.h"
 #include "harmonic.h"
 #include "densemat.h"
@@ -83,9 +82,9 @@ class rawfield : public std::enable_shared_from_this<rawfield>
         // interpolationorder[disjreg] gives the interpolation 
         // order of the field on disjoint region 'disjreg'.
         std::vector<int> interpolationorder = {};
-        // mydisjregconstraints[disjreg] gives the integration object to compute the 
+        // mydisjregconstraints[disjreg] gives the information to compute the 
         // constraint value on the disjoint region. NULL means unconstrained.
-        std::vector<std::shared_ptr<integration>> mydisjregconstraints = {};
+        std::vector<std::shared_ptr<std::tuple<int, int, std::vector<expression>, expression, int, int>>> mydisjregconstraints = {};
         // myconditionalconstraints[disjreg] gives the {conditional expression, constraint value} 
         // on the NODAL disjoint region 'disjreg'. Empty means unconstrained.
         std::vector<std::vector<expression>> myconditionalconstraints = {};
@@ -131,9 +130,9 @@ class rawfield : public std::enable_shared_from_this<rawfield>
         // If provided, 'physregsfororder' must be {physreg1,orderpr1,physreg2,orderpr2,...} with ORDERS SORTED ASCENDINGLY.
         void synchronize(std::vector<int> physregsfororder = {}, std::vector<int> disjregsfororder = {});
         
-        void updateshapefunctions(std::shared_ptr<rawfield> originalthis, bool withtiming = false);
-        void updatenodalshapefunctions(std::shared_ptr<rawfield> originalthis);
-        void updateothershapefunctions(std::shared_ptr<rawfield> originalthis, int dim);
+        void updateshapefunctions(expression updateexpr, expression* meshdeform, std::vector<std::vector<int>> drsindims, int updateaccuracy, bool withtiming = false);
+        void updatenodalshapefunctions(expression updateexpr, expression* meshdeform, std::vector<std::vector<int>> drsindims);
+        void updateothershapefunctions(int dim, expression updateexpr, expression* meshdeform, std::vector<std::vector<int>> drsindims, int updateaccuracy);
         
         void allowsynchronizing(bool allowit);
         void allowvaluesynchronizing(bool allowit);
@@ -190,6 +189,9 @@ class rawfield : public std::enable_shared_from_this<rawfield>
         void setnodalvalues(indexmat nodenumbers, densemat values);
         densemat getnodalvalues(indexmat nodenumbers);
         
+        // Zero all dofs on the requested physical region:
+        void setzerovalue(int physreg);
+        
         void setdisjregconstraint(int physreg, int numfftharms, expression* meshdeform, expression input, int extraintegrationdegree = 0);
         // Set homogeneous Dirichlet constraints:
         void setdisjregconstraint(int physreg);
@@ -232,7 +234,7 @@ class rawfield : public std::enable_shared_from_this<rawfield>
         
         // Only valid for fields without subfields.
         bool isdisjregconstrained(int disjreg);
-        std::vector<std::shared_ptr<integration>> getdisjregconstraints(void);
+        std::vector<std::shared_ptr<std::tuple<int, int, std::vector<expression>, expression, int, int>>> getdisjregconstraints(void);
         
         bool isconditionallyconstrained(int disjreg);
         std::vector<std::vector<expression>> getconditionalconstraints(void);
