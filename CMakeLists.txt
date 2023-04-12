@@ -41,5 +41,5 @@ include(cMake/SetupSLEPC.cmake)
 add_subdirectory(src)
 
 # Add simulations targets
-add_subdirectory(simulations)
+# add_subdirectory(simulations)
 
