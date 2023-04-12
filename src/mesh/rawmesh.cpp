@@ -424,7 +424,17 @@ void rawmesh::load(bool mergeduplicates, std::vector<std::string> meshfiles, int
 void rawmesh::load(std::vector<std::tuple<double, double, double,bool>>& nodes_d, std::vector<std::vector<unsigned int>>& whole_mesh, int globalgeometryskin, int numoverlaplayers,bool rotation, int verbosity)
 {
 
+    if (verbosity > 0)
+        std::cout << "Loading mesh from MF" << nodes_d.size() << std::endl;
+
     wallclock loadtime;
+
+    if (nodes_d.size() == 0)
+    {
+        logs log;
+        log.msg() << "Error in 'mesh' object: provided an empty vector of nodes" << std::endl;
+        log.error();
+    }
 
     // We are in the node section and now get the node coordinates (doubles):
     mynodes.setnumber(nodes_d.size());
@@ -525,14 +535,9 @@ void rawmesh::load(std::vector<std::tuple<double, double, double,bool>>& nodes_d
         orientrenum = mydtracker->getglobalnodenumbers();
     }
 
-    // Define the physical regions based on the disjoint regions they contain:
-    for (int physregindex = 0; physregindex < myphysicalregions.count(); physregindex++)
-    {
-        physicalregion* currentphysicalregion = myphysicalregions.getatindex(physregindex);
-        currentphysicalregion->definewithdisjointregions();
-    }
-
+    myphysicalregions.definewithdisjointregions();
     myelements.orient(orientrenum);
+    errorondisconnecteddisjointregion();
     //errorondisconnecteddisjointregion();
     //myhadaptedmesh = copy();
     //myhadaptedmesh->write("try1.msh", 1);
@@ -547,8 +552,9 @@ void rawmesh::load(std::vector<std::tuple<double, double, double,bool>>& nodes_d
     // Make sure axisymmetry is valid for this mesh:    
     if (universe::isaxisymmetric && getmeshdimension() != 2)
     {
-        std::cout << "Error in 'mesh' object: axisymmetry is only allowed for 2D problems" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Error in 'mesh' object: axisymmetry is only allowed for 2D problems" << std::endl;
+        log.error();
     }
 
     mynumber = 0;
