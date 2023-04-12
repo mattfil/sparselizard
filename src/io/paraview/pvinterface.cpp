@@ -183,8 +183,9 @@ void pvinterface::writetovtkfile(std::string name, iodata datatowrite, int times
     }
     else 
     {
-        std::cout << "Unable to write to file " << name << " or file not found" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Unable to write to file " << name << " or file not found" << std::endl;
+        log.error();
     }
 }
 
@@ -364,8 +365,9 @@ void pvinterface::writetovtufile(std::string name, iodata datatowrite, int times
     }
     else 
     {
-        std::cout << "Unable to write to file " << name << " or file not found" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Unable to write to file " << name << " or file not found" << std::endl;
+        log.error();
     }
 }
 
@@ -395,8 +397,9 @@ void pvinterface::grouptopvdfile(std::string filename, std::vector<std::string> 
             }
             else
             {
-                std::cout << "Error in 'pvinterface': could not find file '" << filestogroup[i] << "' during grouping" << std::endl;
-                abort();
+                logs log;
+                log.msg() << "Error in 'pvinterface': could not find file '" << filestogroup[i] << "' during grouping" << std::endl;
+                log.error();
             }
         }
     
@@ -407,8 +410,9 @@ void pvinterface::grouptopvdfile(std::string filename, std::vector<std::string> 
     }
     else 
     {
-        std::cout << "Unable to write to file " << filename << " or file not found" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Unable to write to file " << filename << " or file not found" << std::endl;
+        log.error();
     }
 }
 
@@ -534,16 +538,19 @@ std::vector<int> pvinterface::getnodereordering(int ourtypenumber)
             case 2:
                 return {0,1,2,3,4,5,6,9,7,12,14,13,8,10,11,15,17,16};
             case 3:
-                return {0,1,2,3,4,5,6,7,13,12,9,8,18,19,23,22,21,20,10,11,14,15,16,17,24,25,26,27,29,28,34,35,37,36,33,30,32,31,38,39};
+                return {0,1,2,3,4,5,6,7,12,13,9,8,18,19,22,23,21,20,10,11,14,15,16,17,24,25,26,27,29,28,34,35,37,36,33,30,32,31,38,39};
             case 4:
-                return {0,1,2,3,4,5,6,7,8,17,16,15,11,10,9,24,25,26,32,31,30,29,28,27,12,13,14,18,19,20,21,22,23,33,35,34,36,37,38,39,43,40,46,47,44,42,45,41,57,61,58,64,65,62,60,63,59,51,55,48,54,56,52,50,53,49,66,69,72,68,71,74,67,70,73};
+                return {0,1,2,3,4,5,6,7,8,15,16,17,11,10,9,24,25,26,30,31,32,29,28,27,12,13,14,18,19,20,21,22,23,33,35,34,36,37,38,39,43,40,46,47,44,42,45,41,57,61,58,64,65,62,60,63,59,51,55,48,54,56,52,50,53,49,66,69,72,68,71,74,67,70,73};
             case 5:
-                return {0,1,2,3,4,5,6,7,8,9,21,20,19,18,13,12,11,10,30,31,32,33,41,40,39,38,37,36,35,34,14,15,16,17,22,23,24,25,26,27,28,29,42,47,44,45,46,43,48,51,49,53,52,50,54,58,59,55,65,66,67,60,64,69,68,61,57,63,62,56,86,90,91,87,97,98,99,92,96,101,100,93,89,95,94,88,73,80,81,70,79,85,82,74,78,84,83,75,72,77,76,71,102,114,106,122,118,110,104,116,108,124,120,112,105,117,109,125,121,113,103,115,107,123,119,111};
+                return {0,1,2,3,4,5,6,7,8,9,18,19,20,21,13,12,11,10,30,31,32,33,38,39,40,41,37,36,35,34,14,15,16,17,22,23,24,25,26,27,28,29,42,47,44,45,46,43,48,51,49,53,52,50,54,58,59,55,65,66,67,60,64,69,68,61,57,63,62,56,86,90,91,87,97,98,99,92,96,101,100,93,89,95,94,88,73,80,81,70,79,85,82,74,78,84,83,75,72,77,76,71,102,114,106,122,118,110,104,116,108,124,120,112,105,117,109,125,121,113,103,115,107,123,119,111};
         }
     }
     
-    std::cout << "Error in 'pvinterface' namespace: trying to use a ParaView element that is undefined in this code." << std::endl;
-    abort();
+    logs log;
+    log.msg() << "Error in 'pvinterface' namespace: trying to use a ParaView element that is undefined in this code." << std::endl;
+    log.error();
+    
+    throw std::runtime_error(""); // fix return warning
 }
 
 

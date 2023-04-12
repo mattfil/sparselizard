@@ -106,7 +106,8 @@ class rawmesh : public std::enable_shared_from_this<rawmesh>
         //Load from custom structures...
         void load(std::vector<std::tuple<double, double, double,bool>>& nodes_d, std::vector<std::vector<unsigned int>>& whole_mesh, int globalgeometryskin, int numoverlaplayers, bool rotation_enabled, int verbosity);
 
-        // Write to file name:
+        // Write to file:
+        void write(int physreg, std::string name);
         void write(std::string name, std::vector<int> physregs, int option);     
         
         // Split each element in the mesh n times:

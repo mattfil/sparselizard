@@ -57,7 +57,7 @@ namespace sl
     
     // Perform operations (union, intersection) on physical regions:
     int selectunion(std::vector<int> physregs);
-    int selectintersection(std::vector<int> physregs);
+    int selectintersection(std::vector<int> physregs, int intersectdim);
     int selectall(void);
     
     // Check if a region is defined/empty/fully included in another region/touches another region:
@@ -157,7 +157,7 @@ namespace sl
     expression atan(expression input);
     expression abs(expression input);
     expression sqrt(expression input);
-    expression log10(expression input);
+    expression log(expression input);
     expression pow(expression base, expression exponent);
     expression exp(expression input);
     expression mod(expression input, double modval);
@@ -203,6 +203,9 @@ namespace sl
 
     // Double dot a:b product:
     expression doubledotproduct(expression a, expression b);
+    
+    // Element-wise product:
+    expression elementwiseproduct(expression a, expression b);
 
     // Get the trace of a square matrix:
     expression trace(expression a);

@@ -11,8 +11,9 @@ spline::spline(std::string filename, char delimiter)
     
     if (data.size()%2 != 0)
     {
-        std::cout << "Error in 'spline' object: expected a vector length multiple of 2 in '" << filename << "' (format {x1,y1,x2,y2,...})" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Error in 'spline' object: expected a vector length multiple of 2 in '" << filename << "' (format {x1,y1,x2,y2,...})" << std::endl;
+        log.error();
     }
     
     std::vector<double> xin(data.size()/2);
@@ -38,14 +39,16 @@ void spline::set(std::vector<double>& xin, std::vector<double>& yin)
     
     if (xin.size() != yin.size())
     {
-        std::cout << "Error in 'spline' object: x and y dataset sizes do not match" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Error in 'spline' object: x and y dataset sizes do not match" << std::endl;
+        log.error();
     }   
     int len = xin.size();
     if (len < 2)
     {
-        std::cout << "Error in 'spline' object: expected at least two data points" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Error in 'spline' object: expected at least two data points" << std::endl;
+        log.error();
     }   
     
     myx = densemat(len,1);
@@ -68,8 +71,9 @@ void spline::set(std::vector<double>& xin, std::vector<double>& yin)
     {
         if (xvals[i]-xvals[i-1] < absnoise)
         {
-            std::cout << "Error in 'spline' object: distance between two samples is " << (xvals[i]-xvals[i-1]) << " (below noise level " << absnoise << ")" << std::endl;
-            abort();
+            logs log;
+            log.msg() << "Error in 'spline' object: distance between two samples is " << (xvals[i]-xvals[i-1]) << " (below noise level " << absnoise << ")" << std::endl;
+            log.error();
         }
     }
     
@@ -169,15 +173,6 @@ densemat spline::evalat(densemat input)
         inputvals[i] = invals[reorderingvector[i]];
     double inmin = inputvals[0]; double inmax = inputvals[numin-1];
     
-    // Error if request is out of range:
-    double absnoise = noisethreshold*std::abs(xmax-xmin);
-    if (inmin < xmin-absnoise || inmax > xmax+absnoise)
-    {
-        std::cout << "Error in 'spline' object: data requested in interval (" << inmin << "," << inmax << ") is out of the provided data range (" << xmin << "," << xmax << ")" << std::endl;
-        abort();
-    }
-    
-    
     std::vector<double> outvec(numin);
     
     // Get the corresponding data via spline interpolation.
@@ -190,18 +185,28 @@ densemat spline::evalat(densemat input)
     {
         double cur = inputvals[i];
         // Find the spline:
-        while (xvals[curspline] < cur-absnoise)
+        while (curspline < myx.count()-1 && xvals[curspline] < cur)
             curspline++;
         // Interpolate on the spline:
         double dx = xvals[curspline]-xvals[curspline-1];
         double tx = (cur-xvals[curspline-1])/dx;
+        tx = std::max(0.0, std::min(1.0, tx));
         double a = avals[curspline];
         double b = bvals[curspline];
         
+        double y = (1.0-tx)*yvals[curspline-1] + tx*yvals[curspline] + tx*(1.0-tx)*((1.0-tx)*a+tx*b);
+        double dydx = 1.0/dx * (yvals[curspline]-yvals[curspline-1] + (1.0-2.0*tx)*(a*(1.0-tx)+b*tx) + tx*(1.0-tx)*(b-a));
+        
+        // The spline turns into a straight line at xmin and xmax:
+        if (cur < xmin)
+            y = dydx*cur + y - dydx*xmin;
+        if (cur > xmax)
+            y = dydx*cur + y - dydx*xmax;
+        
         if (derivativeorder == 0)
-            outvec[i] = (1.0-tx)*yvals[curspline-1] + tx*yvals[curspline] + tx*(1.0-tx)*((1.0-tx)*a+tx*b);
+            outvec[i] = y;
         if (derivativeorder == 1)
-            outvec[i] = 1.0/dx * (yvals[curspline]-yvals[curspline-1] + (1.0-2.0*tx)*(a*(1.0-tx)+b*tx) + tx*(1.0-tx)*(b-a));
+            outvec[i] = dydx;
         if (derivativeorder == 2)
             outvec[i] = 2.0/(dx*dx) * (b-2.0*a + (a-b)*3.0*tx);
         if (derivativeorder == 3)
@@ -224,8 +229,9 @@ void spline::write(std::string filename, int numsplits, char delimiter)
 {
     if (numsplits < 0)
     {
-        std::cout << "Error in 'spline' object: cannot write with " << numsplits << " splits" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Error in 'spline' object: cannot write with " << numsplits << " splits" << std::endl;
+        log.error();
     }
 
     // Get the x positions:

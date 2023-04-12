@@ -1,11 +1,12 @@
 #include "physicalregion.h"
 
 
-physicalregion::physicalregion(disjointregions& inputdisjointregions, physicalregions& inputphysicalregions, int physicalregionnumber)
+physicalregion::physicalregion(disjointregions& inputdisjointregions, physicalregions& inputphysicalregions, int physicalregionnumber, int elementdimension)
 {
     mydisjointregions = &inputdisjointregions;
     myphysicalregions = &inputphysicalregions;
     myphysicalregionnumber = physicalregionnumber;
+    myelementdimension = elementdimension;
 }
 
 int physicalregion::getnumber(void)
@@ -22,10 +23,11 @@ void physicalregion::addelement(int elementtypenumber, int elementnumber)
     
     if (myelementdimension != myelement.getelementdimension())
     {
-        std::cout << "Error in 'physicalregion' object: trying to add a " << myelement.getelementdimension() << "D element to physical region " << myphysicalregionnumber << " which has " << myelementdimension << "D elements." << std::endl;
-        std::cout << "There can only be a single element dimension per physical region." << std::endl;
-        std::cout << "SOLVE THIS with 'setphysicalregionshift' (shifts the physical region numbers in each dimension)." << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Error in 'physicalregion' object: trying to add a " << myelement.getelementdimension() << "D element to physical region " << myphysicalregionnumber << " which has " << myelementdimension << "D elements." << std::endl;
+        log.msg()<< "There can only be a single element dimension per physical region." << std::endl;
+        log.msg() << "SOLVE THIS with 'setphysicalregionshift' (shifts the physical region numbers in each dimension)." << std::endl;
+        log.error();
     }
     
     elementlist[elementtypenumber].push_back(elementnumber);
@@ -53,26 +55,25 @@ int physicalregion::getelementdimension(void)
     return myelementdimension;
 }
 
-void physicalregion::definewithdisjointregions(void)
-{   
-    includesdisjointregion = std::vector<bool>(mydisjointregions->count(), false);
-
-    int prindex = myphysicalregions->getindex(myphysicalregionnumber);
-    
-    for (int i = 0; i < mydisjointregions->count(); i++)
-        includesdisjointregion[i] = mydisjointregions->isinphysicalregion(i, prindex);
-}
-
-void physicalregion::setdisjointregions(std::vector<int> disjointregionlist)
+void physicalregion::definewithdisjointregions(int physregdim, std::vector<int> disjointregionlist, bool ismeshloading)
 {
-    myelementdimension = -1;
     includesdisjointregion = std::vector<bool>(mydisjointregions->count(), false);
     
-    for (int i = 0; i < disjointregionlist.size(); i++)
+    if (ismeshloading)
     {
-        includesdisjointregion[disjointregionlist[i]] = true;
-        if (myelementdimension < mydisjointregions->getelementdimension(disjointregionlist[i]))
-            myelementdimension = mydisjointregions->getelementdimension(disjointregionlist[i]);
+        int prindex = myphysicalregions->getindex(myphysicalregionnumber);
+        
+        for (int i = 0; i < mydisjointregions->count(); i++)
+            includesdisjointregion[i] = mydisjointregions->isinphysicalregion(i, prindex);
+    }
+    else
+    {
+        myelementdimension = physregdim;
+        
+        for (int i = 0; i < disjointregionlist.size(); i++)
+            includesdisjointregion[disjointregionlist[i]] = true;
+        
+        elementlist = std::vector<std::vector<int>>(8, std::vector<int>(0));
     }
 }
 
@@ -145,27 +146,20 @@ void physicalregion::removeduplicatedelements(void)
     }
 }
 
-std::vector<std::vector<int>>* physicalregion::getelementlist(bool prdimonly)
+std::vector<std::vector<int>>* physicalregion::getelementlist(void)
 {
     // Populate the element list if empty.
-    
     bool isempty = true;
     for (int i = 0; i < 8; i++)
-    {
-        if (elementlist[i].size() > 0)
-        {
-            isempty = false;
-            break;
-        }
-    }
+        isempty = (isempty && elementlist[i].size() == 0);
     
-    if (isempty == true)
+    if (isempty)
     {
         // First preallocate:
         std::vector<int> sizes(8,0);
         for (int d = 0; d < includesdisjointregion.size(); d++)
         {
-            if (includesdisjointregion[d] && (not(prdimonly) || mydisjointregions->getelementdimension(d) == myelementdimension))
+            if (includesdisjointregion[d] && mydisjointregions->getelementdimension(d) == myelementdimension)
                 sizes[mydisjointregions->getelementtypenumber(d)] += mydisjointregions->countelements(d);
         }
         for (int i = 0; i < 8; i++)
@@ -175,7 +169,7 @@ std::vector<std::vector<int>>* physicalregion::getelementlist(bool prdimonly)
         std::vector<int> curindexes(8,0);
         for (int d = 0; d < includesdisjointregion.size(); d++)
         {
-            if (includesdisjointregion[d] && (not(prdimonly) || mydisjointregions->getelementdimension(d) == myelementdimension))
+            if (includesdisjointregion[d] && mydisjointregions->getelementdimension(d) == myelementdimension)
             {
                 int typenum = mydisjointregions->getelementtypenumber(d);
                 int numelems = mydisjointregions->countelements(d);
