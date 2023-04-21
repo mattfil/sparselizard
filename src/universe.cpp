@@ -4,6 +4,8 @@
 #include <omp.h>
 
 
+wallclock universe::globalclock = wallclock();
+
 MatSolverType universe::solvertype = "mumps";
 
 int universe::mynumrawmeshes = 0;
@@ -12,17 +14,26 @@ void universe::addtorawmeshcounter(int val)
 {
     if (mynumrawmeshes+val < 0)
     {
-        std::cout << "Error in 'universe' namespace: unexpected negative value for rawmesh counter" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Error in 'universe' namespace: unexpected negative value for rawmesh counter" << std::endl;
+        log.error();
     }
 
     PetscBool ispetscinitialized;
     PetscInitialized(&ispetscinitialized);
     
     if (mynumrawmeshes == 0 && val > 0 && ispetscinitialized == PETSC_FALSE)
+    {
+        slmpi::initialize();
+        slmpi::barrier();
         SlepcInitialize(0,{},0,0);
+    }
     //if (mynumrawmeshes > 0 && mynumrawmeshes+val == 0 && ispetscinitialized == PETSC_TRUE)
+    //{
     //    SlepcFinalize();
+    //    slmpi::barrier();
+    //    slmpi::finalize();
+    //}
 
     mynumrawmeshes += val;
 }
@@ -56,9 +67,12 @@ std::shared_ptr<rawmesh> universe::getrawmesh(void)
         return myrawmesh;
     else
     {
-        std::cout << "Error in 'universe' namespace: an operation tried to access the mesh object but it is not available" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Error in 'universe' namespace: an operation tried to access the mesh object but it is not available" << std::endl;
+        log.error();
     }
+    
+    throw std::runtime_error(""); // fix return warning
 }
 
 bool universe::isaxisymmetric = false;
@@ -72,9 +86,12 @@ double universe::getfundamentalfrequency(void)
         return fundamentalfrequency;
     else
     {
-        std::cout << "Error in 'universe' namespace: the fundamental frequency cannot be negative or 0 (make sure it was set)" << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Error in 'universe' namespace: the fundamental frequency cannot be negative or 0 (make sure it was set)" << std::endl;
+        log.error();
     }
+    
+    throw std::runtime_error(""); // fix return warning
 }
 
 int universe::physregshift = 0;
@@ -127,8 +144,6 @@ void universe::allowreuse(void)
 void universe::forbidreuse(void)
 {
     isreuseallowed = false;
-    
-    resethff();
     
     computedjacobian = NULL;
     
@@ -347,15 +362,8 @@ hierarchicalformfunctioncontainer* universe::gethff(std::string fftypename, int 
     // In case the form function polynomials are available:
     if (typenameindex != -1 && formfuncpolys[typenameindex].second[elementtypenumber].size() > interpolorder && formfuncpolys[typenameindex].second[elementtypenumber][interpolorder].size() > 0)
     {
-        if (isreuseallowed && formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0].isvalueready())
-            return &(formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0]);
-        else
-        {
-            formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0].evaluate(evaluationcoordinates);
-            if (isreuseallowed)
-                formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0].setvaluestatus(true);
-            return &(formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0]);
-        }
+        formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0].evaluate(evaluationcoordinates);
+        return &(formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0]);
     }
     
     // Otherwise compute the form function polynomials and store them:
@@ -372,25 +380,7 @@ hierarchicalformfunctioncontainer* universe::gethff(std::string fftypename, int 
     formfuncpolys[typenameindex].second[elementtypenumber][interpolorder] = {myformfunction->evalat(interpolorder)};
     formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0].evaluate(evaluationcoordinates);
     
-    if (isreuseallowed)
-        formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0].setvaluestatus(true);
-    
     return &(formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0]);
-}
-
-void universe::resethff(void)
-{
-    for (int typenameindex = 0; typenameindex < formfuncpolys.size(); typenameindex++)
-    {
-        for (int elementtypenumber = 0; elementtypenumber < (formfuncpolys[typenameindex].second).size(); elementtypenumber++)
-        {
-            for (int interpolorder = 0; interpolorder < formfuncpolys[typenameindex].second[elementtypenumber].size(); interpolorder++)
-            {
-                if (formfuncpolys[typenameindex].second[elementtypenumber][interpolorder].size() > 0)
-                    formfuncpolys[typenameindex].second[elementtypenumber][interpolorder][0].setvaluestatus(false);
-            }
-        }
-    }
 }
 
 

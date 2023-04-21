@@ -37,8 +37,11 @@ int harmonic::getharmonicnumber(std::string input)
         
         return getharmonicnumber(freqindex, issine);
     }
-    std::cout << "Error in 'harmonic' namespace: '" << input << "' is not a valid harmonic name (correct form is cos0, sin1, cos1, sin2, cos2, ...)" << std::endl;
-    abort();
+    logs log;
+    log.msg() << "Error in 'harmonic' namespace: '" << input << "' is not a valid harmonic name (correct form is cos0, sin1, cos1, sin2, cos2, ...)" << std::endl;
+    log.error();
+    
+    throw std::runtime_error(""); // fix return warning
 }
 
 std::vector<std::pair<int,double>> harmonic::getproduct(int harm1, int harm2)
@@ -77,7 +80,7 @@ std::vector<std::pair<int,double>> harmonic::getproduct(int harm1, int harm2)
             return {std::make_pair(getharmonicnumber(std::abs(freq1+freq2), true),0.5)};
     }
     
-    abort(); // fix return warning
+    throw std::runtime_error(""); // fix return warning
 }
 
 std::vector<std::pair<int,double>> harmonic::getproduct(int harm1, int harm2, int harm2timederivativeorder)
@@ -108,6 +111,9 @@ double harmonic::getderivationfactor(int timederivativeorder, int harm)
 {
     if (timederivativeorder > 0)
     {
+        if (harm < 2)
+            return 0;
+    
         double pi = 3.141592653589793;
         double f0 = universe::getfundamentalfrequency();
 

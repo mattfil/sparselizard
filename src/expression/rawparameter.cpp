@@ -11,7 +11,7 @@ void rawparameter::synchronize(void)
 
 
     // Flush the structure:
-    myoperations = std::vector<std::vector<std::shared_ptr<operation>>>(universe::getrawmesh()->getdisjointregions()->count(), std::vector<std::shared_ptr<operation>>(1, NULL));
+    myoperations = std::vector<std::vector<std::shared_ptr<operation>>>(universe::getrawmesh()->getdisjointregions()->count(), std::vector<std::shared_ptr<operation>>(mynumrows*mynumcols, NULL));
     maxopnum = -1;
     opnums = std::vector<int>(universe::getrawmesh()->getdisjointregions()->count(),-1);
 
@@ -30,10 +30,11 @@ void rawparameter::errorifundefined(std::vector<int> disjregs)
 
     for (int i = 0; i < disjregs.size(); i++)
     {
-        if (myoperations[disjregs[i]].size() == 1 && myoperations[disjregs[i]][0] == NULL)
+        if (myoperations[disjregs[i]].size() == 0 || myoperations[disjregs[i]][0] == NULL)
         {
-            std::cout << "Error in 'parameter' object: the parameter has not been defined on the requested region" << std::endl;
-            abort();
+            logs log;
+            log.msg() << "Error in 'parameter' object: the parameter has not been defined on the requested region" << std::endl;
+            log.error();
         }
     }
 }
@@ -48,7 +49,7 @@ std::vector<int> rawparameter::getopnums(std::vector<int> disjregs)
     return output;
 }
 
-rawparameter::rawparameter(int numrows, int numcols) : myoperations((universe::getrawmesh()->getdisjointregions())->count(), std::vector<std::shared_ptr<operation>>(numrows*numcols, NULL)), opnums((universe::getrawmesh()->getdisjointregions())->count(),-1)
+rawparameter::rawparameter(int numrows, int numcols) : myoperations(universe::getrawmesh()->getdisjointregions()->count(), std::vector<std::shared_ptr<operation>>(numrows*numcols, NULL)), opnums((universe::getrawmesh()->getdisjointregions())->count(),-1)
 { 
     mynumrows = numrows; 
     mynumcols = numcols; 
@@ -66,33 +67,50 @@ void rawparameter::set(int physreg, expression input)
         
     if (mynumrows != input.countrows() || mynumcols != input.countcolumns())
     {
-        std::cout << "Error in 'parameter' object: trying to set the " << mynumrows << "x" << mynumcols << " sized parameter to a size " << input.countrows() << "x" << input.countcolumns() << std::endl;
-        abort();
+        logs log;
+        log.msg() << "Error in 'parameter' object: trying to set the " << mynumrows << "x" << mynumcols << " sized parameter to a size " << input.countrows() << "x" << input.countcolumns() << std::endl;
+        log.error();
     }
     
     maxopnum++;
     
     // Consider ALL disjoint regions in the physical region with (-1):
-    std::vector<int> selecteddisjregs = ((universe::getrawmesh()->getphysicalregions())->get(physreg))->getdisjointregions(-1);
+    std::vector<int> selecteddisjregs = universe::getrawmesh()->getphysicalregions()->get(physreg)->getdisjointregions(-1);
 
-    for (int i = 0; i < selecteddisjregs.size(); i++)
+    for (int row = 0; row < mynumrows; row++)
     {
-        opnums[selecteddisjregs[i]] = maxopnum;
-        for (int row = 0; row < mynumrows; row++)
+        for (int col = 0; col < mynumcols; col++)
         {
-            for (int col = 0; col < mynumcols; col++)
+            std::shared_ptr<operation> op = input.getoperationinarray(row, col);
+            // Make sure there is no dof or tf in the operation:
+            if (op->isdofincluded() || op->istfincluded())
             {
-                std::shared_ptr<operation> op = input.getoperationinarray(row, col);
-                // Make sure there is no dof or tf in the operation:
-                if (op->isdofincluded() || op->istfincluded())
-                {
-                    std::cout << "Error in 'parameter' object: cannot set an expression containing a dof or a tf" << std::endl;
-                    abort();
-                }
+                logs log;
+                log.msg() << "Error in 'parameter' object: cannot set an expression containing a dof or a tf" << std::endl;
+                log.error();
+            }
+            // Make sure there is no recursion:
+            if (op->isparameterincluded(selecteddisjregs, this))
+            {
+                logs log;
+                log.msg() << "Error in 'parameter' object: cannot set an expression including the parameter itself" << std::endl;
+                log.error();
+            }
+            
+            for (int i = 0; i < selecteddisjregs.size(); i++)
+            {
+                opnums[selecteddisjregs[i]] = maxopnum;
                 myoperations[selecteddisjregs[i]][row*mynumcols+col] = op;
             }
         }
     }
+}
+
+bool rawparameter::isdefined(int disjreg)
+{
+    synchronize();
+    
+    return (myoperations[disjreg].size() > 0 && myoperations[disjreg][0] != NULL);
 }
 
 std::shared_ptr<operation> rawparameter::get(int disjreg, int row, int col)

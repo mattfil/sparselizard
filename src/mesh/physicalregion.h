@@ -37,7 +37,7 @@ class physicalregion
     public:
         
         physicalregion(void) {};
-        physicalregion(disjointregions&, physicalregions&, int physicalregionnumber);
+        physicalregion(disjointregions&, physicalregions&, int physicalregionnumber, int elementdimension);
         
         int getnumber(void);
         // Add an element of uncurved type 'elementtypenumber' to the physical region:
@@ -46,11 +46,8 @@ class physicalregion
         int countelements(void);
         int getelementdimension(void);
         
-        // 'definewithdisjointregions' defines the physical region in terms of the disjoint regions it contains.
-        void definewithdisjointregions(void);  
-        // Set manually the list of disjoint regions in the physical region.
-        // Duplicates are removed. 'myelementdimension' is updated to the max dim of the disj regs.
-        void setdisjointregions(std::vector<int> disjointregionlist);
+        // Define the physical region in terms of the disjoint regions it contains:
+        void definewithdisjointregions(int physregdim, std::vector<int> disjointregionlist, bool ismeshloading = false);
 
         // Get the definition of this physical region based on the disjoint regions it contains:
         std::vector<bool> getdefinition(void);
@@ -69,7 +66,8 @@ class physicalregion
         // 'removeduplicatedelements' removes all duplicated elements in 'elementlist' (this call SORTS THE ELEMENTS).
         void removeduplicatedelements(void);
         
-        std::vector<std::vector<int>>* getelementlist(bool prdimonly = true);
+        // Get the elements in the physical region that have the region dimension:
+        std::vector<std::vector<int>>* getelementlist(void);
         
         // Make a full copy of this object (linking objects used are the arguments):
         std::shared_ptr<physicalregion> copy(physicalregions* prs, disjointregions* drs);
