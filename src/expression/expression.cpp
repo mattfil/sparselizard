@@ -1125,7 +1125,7 @@ void expression::streamline(int physreg, std::string filename, const std::vector
 
     int numnodes = startcoords.size()/3;
 
-    // If upstream AND downstream calculation there are double the amount of starting coords:
+    // If upstream AND downstream calculation there are double the amount of starting _coords:
     int factortwo = 2;
     if (downstreamonly)
         factortwo = 1;

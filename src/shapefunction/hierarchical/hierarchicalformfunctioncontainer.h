@@ -50,7 +50,7 @@ class hierarchicalformfunctioncontainer
         hierarchicalformfunctioncontainer(std::string formfunctiontypename, int elementtypenumber);
         
         // Know the highest order available in the container.
-        int gethighestorder(void) { return val.size()-1; };
+        int gethighestorder(void) { return static_cast<int>(val.size()-1); };
 
         // 'set' adds the form function polynomial to the ffpoly container. 
         // All other int arguments are the same as detailed for 'val' above.

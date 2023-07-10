@@ -28,7 +28,7 @@ class opproduct: public operation
         
         void removeterm(int whichterm) { productterms.erase(productterms.begin() + whichterm); };
         
-        int count(void) { return productterms.size(); };
+        int count(void) { return static_cast<int>(productterms.size()); };
         bool isproduct(void) { return true; };
 
         std::vector<std::shared_ptr<operation>> getarguments(void) {return productterms;};

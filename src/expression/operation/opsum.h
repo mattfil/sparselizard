@@ -26,7 +26,7 @@ class opsum: public operation
         void subtractterm(std::shared_ptr<operation> term);
         void removeterm(int whichterm) { sumterms.erase(sumterms.begin() + whichterm); };
         
-        int count(void) { return sumterms.size(); };
+        int count(void) { return static_cast<int>(sumterms.size()); };
         bool issum(void) { return true; };
 
         std::vector<std::shared_ptr<operation>> getarguments(void) {return sumterms;};

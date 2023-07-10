@@ -25,7 +25,7 @@ class disjointregionselector
         // Group by same element type number and same value for all criteria[i]:
         disjointregionselector(std::vector<int> disjointregionnumbers, std::vector<std::vector<int>> criteria);
         
-        int countgroups(void) { return groupeddisjointregions.size(); };
+        int countgroups(void) { return static_cast<int>(groupeddisjointregions.size()); };
         std::vector<int> getgroup(int groupnumber) { return groupeddisjointregions[groupnumber]; };
         
 };

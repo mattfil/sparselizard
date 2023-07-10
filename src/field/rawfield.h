@@ -149,7 +149,7 @@ class rawfield : public std::enable_shared_from_this<rawfield>
         bool ismultiharmonic(void) { return amimultiharmonic; };
         
         int countcomponents(void);
-        int countsubfields(void) { return mysubfields.size(); };
+        int countsubfields(void) { return static_cast<int>(mysubfields.size()); };
         int countformfunctioncomponents(void);
         
         // List all harmonics in the raw field.

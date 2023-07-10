@@ -66,7 +66,7 @@ class elementselector
         bool next(void);
         
         // Count total number of elements:
-        int count(void) { return elems.size(); };
+        int count(void) { return static_cast<int>(elems.size()); };
         
         // Count number of elements in current orientation:
         int countincurrentorientation(void) { return currentrangeend - currentrangebegin + 1; };

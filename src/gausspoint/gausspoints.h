@@ -43,7 +43,7 @@ class gausspoints
         std::vector<double> getcoordinates(void) { return mycoordinates; };
         std::vector<double> getweights(void) { return myweights; };
         
-        int count(void) { return myweights.size(); };
+        int count(void) { return static_cast<int>(myweights.size()); };
         
         void print(void);
 };
