@@ -37,8 +37,8 @@ petscmesh::petscmesh(std::string filename)
     
     if (isvalidext)
     {
-        //HXD DMPlexCreateFromFile(PETSC_COMM_SELF, filename.c_str(), gentools::getfilename(filename).c_str(), PETSC_TRUE, &mypetscmesh);
-        DMPlexCreateFromFile(PETSC_COMM_SELF, filename.c_str(), PETSC_TRUE, &mypetscmesh);
+        DMPlexCreateFromFile(PETSC_COMM_SELF, filename.c_str(), gentools::getfilename(filename).c_str(), PETSC_TRUE, &mypetscmesh);
+        //DMPlexCreateFromFile(PETSC_COMM_SELF, filename.c_str(), PETSC_TRUE, &mypetscmesh);
         DMGetDimension(mypetscmesh, &meshdim);
         return;
     }
@@ -61,7 +61,7 @@ void petscmesh::extract(nodes& mynodes, elements& myelements, physicalregions& m
 {
     ///// Extract the node coordinates:
     
-    Vec coordvec = PETSC_NULL;
+    Vec coordvec = PETSC_NULLPTR;
     DMGetCoordinates(mypetscmesh, &coordvec);
     
     int numberofnodes;

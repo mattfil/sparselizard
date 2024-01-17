@@ -150,16 +150,18 @@ class expression
         // and then reused for all other occurences in 'expr'. 
         void reuseit(bool istobereused = true);
         
-        bool isscalar(void) { return (mynumrows == 1 && mynumcols == 1); };
+        bool isscalar(void) const { return (mynumrows == 1 && mynumcols == 1); };
         bool isharmonicone(std::vector<int> disjregs);
         bool isvalueorientationdependent(std::vector<int> disjregs);
-        bool iszero(void);
-        
+        bool iszero(void) const;
+        bool isnan(void) const;
+        void simplify();
+
         // Output a vector based on field 'onefield' that stores the barycenter values of the expression.
         vec atbarycenter(int physreg, field onefield);
         
         // Print the expression:
-        void print(void);
+        void print(void) const;
         
         // Read the function documentation before using it!
         void rotate(double ax, double ay, double az, std::string leftop = "default", std::string rightop = "default");
@@ -167,7 +169,7 @@ class expression
         expression at(int row, int col);
         
         // Evaluate a space-independent scalar expression:
-        double evaluate(void);
+        double evaluate(void) const;
         // Same but allow x, y and/or z fields without derivatives:
         std::vector<double> evaluate(std::vector<double>& xcoords, std::vector<double>& ycoords, std::vector<double>& zcoords);
         

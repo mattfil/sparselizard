@@ -199,7 +199,7 @@ namespace gentools
     // The number of matches is returned. It is allowed to have duplicate coordinates in the target.
     int findcoordinates(std::vector<double>& targetcoords, std::vector<double>& tofindintarget, std::vector<int>& posfound);
     
-    // Write to 'selectedcoords' the coordinates in 'coords' that have a true selection value: 
+    // Write to 'selectedcoords' the coordinates in '_coords' that have a true selection value: 
     void selectcoordinates(std::vector<bool>& selection, std::vector<double>& coords, double* selectedcoords);
     
     // From the candidates vector pick a set of coordinates that have rather equally spaced (possibly NOT UNIQUE) indexes:

@@ -1271,7 +1271,7 @@ bool expression::isvalueorientationdependent(std::vector<int> disjregs)
     return false;
 }
 
-bool expression::iszero(void)
+bool expression::iszero(void) const
 {
     for (int i = 0; i < mynumrows*mynumcols; i++)
     {
@@ -1280,6 +1280,23 @@ bool expression::iszero(void)
     }
     return true;
 }
+
+bool expression::isnan(void) const
+{
+    for (int i = 0; i < mynumrows * mynumcols; i++)
+    {
+        if (myoperations[i]->isconstant() == false || !std::isnan(myoperations[i]->getvalue()))
+            return false;
+    }
+    return true;
+}
+
+void expression::simplify() {
+    for (auto& item : myoperations)
+    {
+        item->simplify({});
+    }
+};
 
 vec expression::atbarycenter(int physreg, field onefield)
 {
@@ -1312,7 +1329,7 @@ vec expression::atbarycenter(int physreg, field onefield)
     return formul.rhs();
 }
 
-void expression::print(void)
+void expression::print(void) const
 {
     std::cout << std::endl << "Expression size is " << mynumrows << "x" << mynumcols << std::endl;
 
@@ -1441,16 +1458,21 @@ expression expression::at(int row, int col)
     return arrayentry;
 }
 
-double expression::evaluate(void)
+double expression::evaluate(void) const
 {
     if (isscalar())
     {
+        //case of constant scalar, there could not be a mesh associated
+        if (myoperations[0]->isconstant() == true)
+        {
+            return myoperations[0]->getvalue();
+        }
         // Take an arbitrary node in the geometry:
         int nodedisjreg = universe::getrawmesh()->getdisjointregions()->getindim(0)[0];
         std::vector<int> firstnodeindisjreg = {universe::getrawmesh()->getdisjointregions()->getrangebegin(nodedisjreg)};
         elementselector elemselect({nodedisjreg}, firstnodeindisjreg, false);
         std::vector<double> evalcoords = {0,0,0};
-    
+     
         std::vector<std::vector<densemat>> evaled = myoperations[0]->interpolate(elemselect, evalcoords, NULL);
 
         if (evaled.size() > 2)
