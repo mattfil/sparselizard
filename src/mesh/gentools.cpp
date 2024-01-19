@@ -147,7 +147,7 @@ int gentools::removeduplicates(std::vector<int> toremove, std::vector<int>& renu
     
     for (int i = 0; i < numblocks; i++)
     {
-        std::sort(&toremove[i*blocklen], &toremove[(i+1)*blocklen]);
+        std::sort(&toremove[i*blocklen], &toremove[i * blocklen] + blocklen);
         countatval[toremove[i*blocklen+0]]++;
     }
     
@@ -178,6 +178,7 @@ int gentools::removeduplicates(std::vector<int> toremove, std::vector<int>& renu
     
     for (int i = 0; i < numvals; i++)
     {
+        if (adsatval[i] * blocklen >= sorted.size()) continue;
         int* data = &sorted[adsatval[i]*blocklen];
         int numdata = adsatval[i+1]-adsatval[i];
     
