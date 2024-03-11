@@ -1,12 +1,11 @@
 function(ConfigurePETSC TARGET)
 
-
 # Find petsc headers:
 FIND_PATH(PETSC_INCLUDE_PATH
     NAMES petsc.h
     PATHS
     "${PETSC_PATH}/include"
-    NO_DEFAULT_PATH
+    NO_DEFAULT_PATH REQUIRED
     )
 
 if(PETSC_INCLUDE_PATH)
@@ -18,11 +17,8 @@ endif()
 FIND_PATH(PETSCCONF_INCLUDE_PATH
     NAMES petscconf.h
     PATHS
-    "${PETSC_PATH}/arch-linux-c-opt/include"
-    "${PETSC_PATH}/arch-linux2-c-opt/include"
-    "${PETSC_PATH}/arch-darwin-c-opt/include"
-	"${PETSC_PATH}/arch-mswin-c-opt/include"
-    NO_DEFAULT_PATH
+    "${PETSC_PATH}/lib/${CMAKE_BUILD_TYPE}/include"
+    NO_DEFAULT_PATH REQUIRED
     )
 #get_filename_component(PETSCCONF_INCLUDE_PATH "${PETSCCONF_INCLUDE_PATH}" DIRECTORY )
 
@@ -36,11 +32,8 @@ endif()
 FIND_FILE(PETSC_LIBRARIES
     NAMES libpetsc.lib
     PATHS
-    "${PETSC_PATH}/arch-linux-c-opt/lib"
-    "${PETSC_PATH}/arch-linux2-c-opt/lib"
-    "${PETSC_PATH}/arch-darwin-c-opt/lib"
-	"${PETSC_PATH}/arch-mswin-c-opt/lib"
-    NO_DEFAULT_PATH
+    "${PETSC_PATH}/lib/${CMAKE_BUILD_TYPE}"
+    NO_DEFAULT_PATH REQUIRED
     )
 
 if(PETSC_LIBRARIES)

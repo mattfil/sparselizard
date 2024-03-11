@@ -6,7 +6,6 @@
 
 function(ConfigureMPI TARGET)
 
-
 # Find mpi headers:
 FIND_PATH(MPI_INCLUDE_PATH
     NAMES mpi.h
@@ -24,7 +23,7 @@ endif()
 
 # Find mpi library:
 FIND_LIBRARY(MPI_LIBRARIES
-    NAMES mpi
+    NAMES mpi impi
     PATHS
     "${MPI_PATH}/lib"
     NO_DEFAULT_PATH

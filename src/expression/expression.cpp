@@ -35,7 +35,21 @@ expression::expression(field input)
     }
 }
 
-expression::expression(double input) { mynumrows = 1; mynumcols = 1; myoperations = {std::shared_ptr<opconstant>(new opconstant(input))}; }
+void expression::update(const double newval)
+{
+    if (myoperations.size() == 1 && myoperations[0]->ismutableconstant())
+    {
+        myoperations[0]->update(newval);
+    }
+}
+
+expression::expression(const double input, const bool can_be_simplified) : mynumrows(1), mynumcols(1)
+{
+    if (can_be_simplified)
+        myoperations = { std::make_shared<opconstant>(input) };
+    else
+        myoperations = { std::make_shared<opmutableconstant>(input) };
+}
 
 expression::expression(parameter input)
 {
@@ -237,6 +251,31 @@ expression::expression(spline spl, expression arg)
     }
     mynumrows = 1; mynumcols = 1;
     myoperations = {std::shared_ptr<opspline>(new opspline(spl,arg.myoperations[0]))};
+}
+
+expression::expression(lookup_interpolator* spl, std::vector<expression> args)
+{
+    for (const auto& item : args)
+    {
+        if (item.isscalar() == false)
+        {
+            logs log;
+            log.msg() << "Error in 'expression' object: expected a scalar expression as argument for the spline interpolation" << std::endl;
+            log.error();
+        }
+        if (item.myoperations[0]->isdofincluded() || item.myoperations[0]->istfincluded())
+        {
+            logs log;
+            log.msg() << "Error in 'expression' object: spline argument cannot include a dof() or tf()" << std::endl;
+            log.error();
+        }
+    }
+
+    mynumrows = 1; mynumcols = 1;
+    std::vector<std::shared_ptr<operation>> theops;
+    for (const auto& item : args)
+        theops.push_back(item.myoperations[0]);
+    myoperations = { std::shared_ptr<opspline_nt>(new opspline_nt(spl,theops)) };
 }
 
 expression::expression(std::vector<double> pos, std::vector<expression> exprs, expression tocompare)
@@ -1463,7 +1502,7 @@ double expression::evaluate(void) const
     if (isscalar())
     {
         //case of constant scalar, there could not be a mesh associated
-        if (myoperations[0]->isconstant() == true)
+        if (myoperations[0]->isconstant() == true || myoperations[0]->ismutableconstant())
         {
             return myoperations[0]->getvalue();
         }

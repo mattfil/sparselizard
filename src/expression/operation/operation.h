@@ -160,6 +160,10 @@ class operation : public std::enable_shared_from_this<operation>
         virtual void nextimpliciteuler(double tinit, double dt) {};
         virtual void nextgenalpha(double beta, double gamma, double alphaf, double alpham, double tinit, double dt) {};
         virtual void approvetimestep(void) {};
+
+        //helper method to allow modification of 
+        virtual void update(const double val) { ; }
+        virtual bool ismutableconstant() { return false; }
 };
 
 #include "opabs.h"
@@ -169,6 +173,7 @@ class operation : public std::enable_shared_from_this<operation>
 #include "opathp.h"
 #include "opcondition.h"
 #include "opconstant.h"
+#include "opmutableconstant.h"
 #include "opcos.h"
 #include "opcustom.h"
 #include "opdetjac.h"
@@ -196,5 +201,6 @@ class operation : public std::enable_shared_from_this<operation>
 #include "optan.h"
 #include "optf.h"
 #include "optime.h"
+#include "opspline_nt.h"
 
 #endif

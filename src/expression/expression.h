@@ -33,6 +33,7 @@
 #include "gentools.h"
 #include "iointerface.h"
 #include "spline.h"
+#include "mf_interpolator.h"
 #include "referencecoordinategroup.h"
 #include "port.h"
 
@@ -73,7 +74,7 @@ class expression
         expression(void) {};
         // Implicit conversion from field, double and parameter to expression:
         expression(field);
-        expression(double);
+        expression(const double, const bool can_be_simplified=true);
         expression(parameter);
         expression(port);
         expression(int numrows, int numcols, std::vector<expression>);
@@ -85,6 +86,8 @@ class expression
         expression(expression condexpr, expression exprtrue, expression exprfalse);
         // Expression based on a spline interpolation of a discrete function of argument 'arg':
         expression(spline spl, expression arg);
+        expression(lookup_interpolator* spl, std::vector<expression> arg);
+
         // Piecewise expression definition:
         expression(std::vector<double> pos, std::vector<expression> exprs, expression tocompare);
         // Custom expression based on a user-defined function:
@@ -175,7 +178,7 @@ class expression
         
         // Output the resized expression (filled with zero if larger):
         expression resize(int numrows, int numcols);
-        
+        void update(const double newval);
         
         
         // THE FUNCTIONS BELOW ARE NOT MEANT TO BE CALLED BY THE USER!

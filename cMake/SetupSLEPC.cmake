@@ -6,7 +6,7 @@ FIND_PATH(SLEPC_INCLUDE_PATH
     NAMES slepc.h
     PATHS
     "${SLEPC_PATH}/include"
-    NO_DEFAULT_PATH
+    NO_DEFAULT_PATH REQUIRED
     )
 
 if(SLEPC_INCLUDE_PATH)
@@ -18,11 +18,8 @@ endif()
 FIND_PATH(SLEPCCONF_INCLUDE_PATH
     NAMES slepcconf.h
     PATHS
-    "${SLEPC_PATH}/arch-linux-c-opt/include"
-    "${SLEPC_PATH}/arch-linux2-c-opt/include"
-    "${SLEPC_PATH}/arch-darwin-c-opt/include"
-	"${SLEPC_PATH}/arch-mswin-c-opt/include"
-    NO_DEFAULT_PATH
+    "${SLEPC_PATH}/lib/${CMAKE_BUILD_TYPE}/include"
+    NO_DEFAULT_PATH REQUIRED
     )
 #get_filename_component(SLEPCCONF_INCLUDE_PATH "${SLEPCCONF_INCLUDE_PATH}" DIRECTORY )
 
@@ -36,11 +33,8 @@ endif()
 FIND_FILE(SLEPC_LIBRARIES
     NAMES libslepc.lib
     PATHS
-    "${SLEPC_PATH}/arch-linux-c-opt/lib"
-    "${SLEPC_PATH}/arch-linux2-c-opt/lib"
-    "${SLEPC_PATH}/arch-darwin-c-opt/lib"
-	"${SLEPC_PATH}/arch-mswin-c-opt/lib"
-    NO_DEFAULT_PATH
+    "${SLEPC_PATH}/lib/${CMAKE_BUILD_TYPE}"
+    NO_DEFAULT_PATH REQUIRED
     )
 
 if(SLEPC_LIBRARIES)

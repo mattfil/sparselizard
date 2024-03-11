@@ -1,5 +1,24 @@
 function(ConfigureBLAS TARGET)
 
+message("${BLAS_PATH}/include")
+
+find_package(OpenBLAS)
+
+if(OpenBLAS_FOUND)
+    message("OpenBLAS found!")
+
+    # Include directories
+    target_include_directories(${TARGET} PUBLIC ${OpenBLAS_INCLUDE_DIRS})
+
+    # Link libraries
+    target_link_libraries(${TARGET} PUBLIC ${OpenBLAS_LIBRARIES})
+
+    SET(BLAS_FOUND YES PARENT_SCOPE)
+
+else()
+    message("OpenBLAS not found.")
+endif()
+return()
 
 # Find blas headers:
 FIND_PATH(BLAS_INCLUDE_PATH
